@@ -1,7 +1,7 @@
 
 #include "stm32g030xx.h"
 #include "kernel.h"
-
+#include "gpio.h"
 
 int main(void){
 	
