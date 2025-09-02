@@ -5,6 +5,7 @@
 
 int main(void){
 	
+	Kernel_Systick_Init();
 	GPIO_Init();
 	GPIO_Toggle();
 	
