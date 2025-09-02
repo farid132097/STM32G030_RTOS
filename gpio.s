@@ -4,7 +4,7 @@
 	
                       AREA       |.constdata|, DATA, READONLY
 
-;Define necessary address bases (constants)
+;define necessary address bases (constants)
 DEF_CODE_BASE         EQU        0x00000000
 DEF_SRAM_BASE         EQU        0x20000000
 DEF_PERIPHERAL_BASE   EQU        0x40000000
@@ -15,7 +15,7 @@ DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
 DEF_GPIO_BASE         EQU        0x50000000
 
 
-;Define different peripheral address bases
+;define different peripheral address bases
 DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000
 DEF_GPIOA_BASE        EQU        DEF_GPIO_BASE       + 0x00000000
 DEF_GPIOB_BASE        EQU        DEF_GPIO_BASE       + 0x00000400
@@ -23,10 +23,18 @@ DEF_GPIOC_BASE        EQU        DEF_GPIO_BASE       + 0x00000800
 DEF_GPIOD_BASE        EQU        DEF_GPIO_BASE       + 0x00000C00
 
 
-;Define different peripheral register addresses
+;define different peripheral register addresses
 DEF_RCC_IOPENR        EQU        DEF_RCC_BASE        + 0x00000034
 DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000
 DEF_GPIOA_ODR         EQU        DEF_GPIOA_BASE      + 0x00000014
+
+
+DEF_GPIO_PIN_NUMBER   EQU        0x00000002
+DEF_GPIO_MODER_MASK   EQU        0x00000003
+DEF_GPIO_MODER_INPUT  EQU        0x00000000
+DEF_GPIO_MODER_OUTPUT EQU        0x00000001
+DEF_GPIO_MODER_ALTFNC EQU        0x00000002
+DEF_GPIO_MODER_ANALOG EQU        0x00000003
 
 
 
@@ -50,10 +58,19 @@ GPIO_Init
 	                  ORRS       R1, R1, R2                      ;IOPENR |=(1<<0) 
 					  STR        R1, [R0]                        ;store val to IOPENR
 					  
-					  
 					  ;set pin as general purpose i/o
 					  LDR        R0, =DEF_GPIOA_MODER            ;load MODER address
 					  LDR        R1, [R0]                        ;load MODER val
+					  
+					  LDR        R2, =DEF_GPIO_PIN_NUMBER        ;load pin number
+					  LDR        R3, =DEF_GPIO_MODER_MASK        ;load gp output val
+					  LSLS       R3, R3, R2                      ;lsl by pin number
+					  MVNS       R3, R3                          ;bitwise not
+					  ANDS       R1, R1, R3                      ;clear moder bits
+					  
+					  LDR        R3, =DEF_GPIO_MODER_MASK        ;load gp output val
+					  LSLS       R3, R3, R2                      ;lsl by pin number
+					  
 					  LDR        R2, =0x00000300                 ;mask bit8 & 9
 					  MVNS       R2, R2                          ;invert bits
 					  ANDS       R1, R1, R2                      ;clear bits

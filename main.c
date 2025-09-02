@@ -11,8 +11,8 @@ int main(void){
 	
 	while(1){
 		
-		GPIO_Toggle();
-		Delay();
+		//GPIO_Toggle();
+		//Delay();
 		
 	}
 	

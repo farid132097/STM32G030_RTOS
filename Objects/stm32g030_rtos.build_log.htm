@@ -30,16 +30,19 @@ Project File Date:  09/02/2025
 <h2>Output:</h2>
 *** Using Compiler 'V6.22', folder: 'C:\Keil\ARM\ARMCLANG\Bin'
 Rebuild target 'STM32G030F6P6'
-"kernel.s", line 48: Warning: A1581W: Added 2 bytes of padding at address 0x16
-   48 00000018                       END                                        ;end of file
+assembling startup_stm32g030xx.s...
+"gpio.s", line 125: Warning: A1581W: Added 2 bytes of padding at address 0x4e
+  125 00000050                       END                                        ;end of file
+0 Errors, 1 Warning
+assembling gpio.s...
+"kernel.s", line 61: Warning: A1581W: Added 2 bytes of padding at address 0x26
+   61 00000028                       END                                        ;end of file
 0 Errors, 1 Warning
 assembling kernel.s...
-compiling system_stm32g0xx.c...
-assembling startup_stm32g030xx.s...
-assembling gpio.s...
 compiling main.c...
+compiling system_stm32g0xx.c...
 linking...
-Program Size: Code=496 RO-data=208 RW-data=0 ZI-data=1632  
+Program Size: Code=532 RO-data=208 RW-data=0 ZI-data=1632  
 ".\Objects\stm32g030_rtos.axf" - 0 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
@@ -62,7 +65,7 @@ Package Vendor: Keil
 <h2>Collection of Component Files used:</h2>
 
    * Component: ARM::CMSIS:CORE@6.1.0
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

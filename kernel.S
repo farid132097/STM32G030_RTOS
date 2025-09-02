@@ -27,7 +27,8 @@ DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 					  
                       
 					  EXPORT     Kernel_Systick_Init
-					  
+					  EXPORT     SysTick_Handler
+					  IMPORT     GPIO_Toggle
                       
 Kernel_Systick_Init
                       PUSH       {LR}                            ;push return address
@@ -38,9 +39,21 @@ Kernel_Systick_Init
 					  MOVS       R1, #0                          ;clear reg
 					  STR        R1, [R0]                        ;clear stk_val reg
 					  LDR        R0, =DEF_STK_CTRL               ;load stk_ctrl reg address
-					  MOVS       R1, #1                          ;mask bit0
+					  MOVS       R1, #3                          ;mask bit0
 					  STR        R1, [R0]                        ;set val to stk_ctrl
 					  POP        {PC}
+					  
+SysTick_Handler
+                      PUSH       {R0-R3}                         ;push regs
+					  
+                      ;toggle pin PA4
+					  LDR        R0, =0x50000014                 ;load ODR address
+					  LDR        R1, [R0]                        ;load ODR val
+					  MOVS       R2, #0x10                       ;mask bit4
+					  EORS       R1, R1, R2                      ;xor 4th bit
+					  STR        R1, [R0]                        ;store val to ODR
+					  POP        {R0-R3}                         ;pop regs
+					  BX         LR                              ;return from interrupt
 					  
 					  
 					  
