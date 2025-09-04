@@ -21,11 +21,22 @@ DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
 DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 	
 
+
+                      ;RAM area starts
+					  AREA    |.data|, DATA, READWRITE, ALIGN=2
+					  
+				      ;enlist global variables
+					  EXPORT     Current_TCB
+                      EXPORT     Next_TCB
+					  
+Current_TCB           DCD        0                               ;pointer to current task's PSP
+Next_TCB              DCD        0                               ;pointer to next task's PSP
+					  
+
+                      ;code area starts
                       AREA       |.text|, CODE, READONLY
 					  
-					  
-					  
-                      
+                      ;enlist global functions
 					  EXPORT     Kernel_Systick_Init
 					  EXPORT     SysTick_Handler
 					  IMPORT     GPIO_Toggle
@@ -60,7 +71,9 @@ PendSV_Handler
                       CPSID      I                               ;disable interrupts
                       LDR        R0, =Current_TCB                ;load current tcb addr
                       LDR        R1, [R0]                        ;R1 current task sp
-                      STMIA      R1!,{R4-R7}                     ;store R4-R7, increment SP
+					  MOVS       R3, #32                         ;load val
+					  SUBS       R1, R1, R3                      ;start = end - 32
+                      STMIA      R1!,{R4-R7}                     ;store R4-R7, R1 -> start+16
                       MOV        R2, R8                          ;copy
                       STR        R2, [R1]                        ;store R8
                       ADDS       R1, R1, #4                      ;inc +4
@@ -80,23 +93,32 @@ PendSV_Handler
 					  LDR        R1, [R0]                        ;R1 next task sp
 					  
 					  ;restore 
-                      LDMIA      R1!,{R4-R7}                     ;restore registers
-                      LDR        R8, [R1]                        ;load 
-					  ADD        R1, R1, #4                      ;inc +4
-					  LDR        R9, [R1]                        ;load 
-					  ADD        R1, R1, #4                      ;inc +4
-					  LDR        R10, [R1]                       ;load 
-					  ADD        R1, R1, #4                      ;inc +4
-					  LDR        R11, [R1]                       ;load 
-					  ADD        R1, R1, #4                      ;inc +4
+					  MOVS       R3, #32                         ;load val
+					  SUBS       R1, R1, R3                      ;go to start of saved context
+                      LDMIA      R1!,{R4-R7}                     ;restore R4-R7, R1 -> start+16
+                      LDR        R2, [R1]                        ;load 
+					  ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R8, R2                          ;copy
+					  
+					  LDR        R2, [R1]                        ;load 
+					  ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R9, R2                          ;copy
+					  
+					  LDR        R2, [R1]                        ;load 
+					  ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R10, R2                         ;copy
+					  
+					  LDR        R2, [R1]                        ;load 
+					  ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R11, R2                         ;copy
 					  
                       ;switch PSP to next task
-                      MSR PSP,   R1                              ;switch PSP
+                      MSR        PSP, R1                         ;switch PSP
 					  
 					  ;update Current_TCB pointer
 					  LDR        R0, =Current_TCB                ;load current tcb addr
-					  LDR        R2, =Current_TCB                ;load next tcb addr
-					  LDR        R3, [R2]                        ;
+					  LDR        R2, =Next_TCB                   ;load next tcb addr
+					  LDR        R3, [R2]                        ;R3 = next saved-SP (end)
 					  STR        R3, [R0]                        ;store
 					  
                       CPSIE      I                               ;enable interrupt
@@ -108,3 +130,5 @@ PendSV_Handler
                       END                                        ;end of file
 
     
+	
+	
