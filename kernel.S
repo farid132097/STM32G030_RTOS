@@ -56,6 +56,53 @@ SysTick_Handler
 					  BX         LR                              ;return from interrupt
 					  
 					  
+PendSV_Handler
+                      CPSID      I                               ;disable interrupts
+                      LDR        R0, =Current_TCB                ;load current tcb addr
+                      LDR        R1, [R0]                        ;R1 current task sp
+                      STMIA      R1!,{R4-R7}                     ;store R4-R7, increment SP
+                      MOV        R2, R8                          ;copy
+                      STR        R2, [R1]                        ;store R8
+                      ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R2, R9                          ;copy
+                      STR        R2, [R1]                        ;store R8
+                      ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R2, R10                         ;copy
+                      STR        R2, [R1]                        ;store R8
+                      ADDS       R1, R1, #4                      ;inc +4
+					  MOV        R2, R11                         ;copy
+                      STR        R2, [R1]                        ;store R8
+                      ADDS       R1, R1, #4                      ;inc +4
+					  STR        R1, [R0]                        ;save updated SP
+					  
+					  ;load next task
+                      LDR        R0, =Next_TCB                   ;load next tcb addr
+					  LDR        R1, [R0]                        ;R1 next task sp
+					  
+					  ;restore 
+                      LDMIA      R1!,{R4-R7}                     ;restore registers
+                      LDR        R8, [R1]                        ;load 
+					  ADD        R1, R1, #4                      ;inc +4
+					  LDR        R9, [R1]                        ;load 
+					  ADD        R1, R1, #4                      ;inc +4
+					  LDR        R10, [R1]                       ;load 
+					  ADD        R1, R1, #4                      ;inc +4
+					  LDR        R11, [R1]                       ;load 
+					  ADD        R1, R1, #4                      ;inc +4
+					  
+                      ;switch PSP to next task
+                      MSR PSP,   R1                              ;switch PSP
+					  
+					  ;update Current_TCB pointer
+					  LDR        R0, =Current_TCB                ;load current tcb addr
+					  LDR        R2, =Current_TCB                ;load next tcb addr
+					  LDR        R3, [R2]                        ;
+					  STR        R3, [R0]                        ;store
+					  
+                      CPSIE      I                               ;enable interrupt
+                      BX LR                                      ;return from exception
+					  
+					  
 					  
 					  
                       END                                        ;end of file
