@@ -5,11 +5,15 @@
 
 int main(void){
 	
-	Kernel_Systick_Init();
+	//Kernel_Systick_Init();
 	GPIO_Init();
-	GPIO_Toggle();
 	
 	while(1){
+		
+		GPIO_High();
+		Delay();
+		GPIO_Low();
+		Delay();
 		
 		//GPIO_Toggle();
 		//Delay();

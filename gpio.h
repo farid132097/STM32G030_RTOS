@@ -4,6 +4,8 @@
 #define _GPIO_H_
 
 void    GPIO_Init(void);
+void    GPIO_High(void);
+void    GPIO_Low(void);
 void    GPIO_Toggle(void);
 void    Delay(void);
 
