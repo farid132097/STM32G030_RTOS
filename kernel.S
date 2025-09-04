@@ -39,20 +39,20 @@ Kernel_Systick_Init
 					  MOVS       R1, #0                          ;clear reg
 					  STR        R1, [R0]                        ;clear stk_val reg
 					  LDR        R0, =DEF_STK_CTRL               ;load stk_ctrl reg address
-					  MOVS       R1, #3                          ;mask bit0
+					  MOVS       R1, #7                          ;mask bit0, bit1 & bit2
 					  STR        R1, [R0]                        ;set val to stk_ctrl
 					  POP        {PC}
 					  
 SysTick_Handler
-                      PUSH       {R0-R3}                         ;push regs
-					  
-                      ;toggle pin PA4
+                      PUSH       {R4-R7}                         ;push regs
 					  LDR        R0, =0x50000014                 ;load ODR address
 					  LDR        R1, [R0]                        ;load ODR val
-					  MOVS       R2, #0x10                       ;mask bit4
-					  EORS       R1, R1, R2                      ;xor 4th bit
+					  MOVS       R2, #0x02                       ;pin number
+					  MOVS       R3, #0x01                       ;assign 1
+					  LSLS       R3, R3, R2                      ;lsl by pin number
+					  EORS       R1, R1, R3                      ;xor 4th bit
 					  STR        R1, [R0]                        ;store val to ODR
-					  POP        {R0-R3}                         ;pop regs
+					  POP        {R4-R7}                         ;pop regs
 					  BX         LR                              ;return from interrupt
 					  
 					  

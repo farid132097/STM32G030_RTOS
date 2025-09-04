@@ -29,7 +29,7 @@ DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000
 DEF_GPIOA_ODR         EQU        DEF_GPIOA_BASE      + 0x00000014
 
 
-DEF_GPIO_PIN_NUMBER   EQU        0x00000004
+DEF_GPIO_PIN_NUMBER   EQU        0x00000002
 DEF_GPIO_MODER_MASK   EQU        0x00000003
 DEF_GPIO_MODER_INPUT  EQU        0x00000000
 DEF_GPIO_MODER_OUTPUT EQU        0x00000001
@@ -60,22 +60,6 @@ GPIO_Init
 	                  ORRS       R1, R1, R2                      ;IOPENR |=(1<<0) 
 					  STR        R1, [R0]                        ;store val to IOPENR
 					  
-					  ;set pin as general purpose i/o
-					  LDR        R0, =DEF_GPIOA_MODER            ;load MODER address
-					  LDR        R1, [R0]                        ;load MODER val
-					  
-					  LDR        R2, =DEF_GPIO_PIN_NUMBER        ;load pin number
-					  LSLS       R2, R2, #0x01                   ;pin number*2
-					  LDR        R3, =DEF_GPIO_MODER_MASK        ;load gp output val
-					  LSLS       R3, R3, R2                      ;lsl by pin number
-					  MVNS       R3, R3                          ;bitwise not
-					  ANDS       R1, R1, R3                      ;clear moder bits
-					  
-					  LDR        R3, =DEF_GPIO_MODER_OUTPUT      ;load gp output val
-					  LSLS       R3, R3, R2                      ;lsl by pin number
-					  ORRS       R1, R1, R3                      ;or with output val
-					  STR        R1, [R0]                        ;store val to IOPENR
-					  
 					  ;set ODR pin high to turn off LED
 					  LDR        R0, =DEF_GPIOA_ODR              ;load ODR address
 					  LDR        R1, [R0]                        ;load ODR val
@@ -84,6 +68,20 @@ GPIO_Init
 					  LSLS       R2, R2, R3                      ;lsl by pin number
 					  ORRS       R1, R1, R2                      ;set bit of the pin
 					  STR        R1, [R0]                        ;store val to ODR
+					  
+					  ;set pin as general purpose i/o
+					  LDR        R0, =DEF_GPIOA_MODER            ;load MODER address
+					  LDR        R1, [R0]                        ;load MODER val
+					  LDR        R2, =DEF_GPIO_PIN_NUMBER        ;load pin number
+					  LSLS       R2, R2, #0x01                   ;left shift to x2
+					  LDR        R3, =DEF_GPIO_MODER_MASK        ;load gp output val
+					  LSLS       R3, R3, R2                      ;lsl by pin number
+					  MVNS       R3, R3                          ;bitwise not
+					  ANDS       R1, R1, R3                      ;clear moder bits
+					  LDR        R3, =DEF_GPIO_MODER_OUTPUT      ;load gp output val
+					  LSLS       R3, R3, R2                      ;lsl by pin number
+					  ORRS       R1, R1, R3                      ;or with output val
+					  STR        R1, [R0]                        ;store val to MODER
 					  
 					  ;return from function
 					  POP        {PC}                            ;jump to return address
@@ -119,10 +117,10 @@ GPIO_Toggle
 					  ;toggle pin PA4
 					  LDR        R0, =DEF_GPIOA_ODR              ;load ODR address
 					  LDR        R1, [R0]                        ;load ODR val
-					  
 					  LDR        R2, =DEF_GPIO_PIN_NUMBER        ;mask pin number
-					  MOVS       R2, #0x10                       ;mask bit4
-					  EORS       R1, R1, R2                      ;xor 4th bit
+					  MOVS       R3, #0x01                       ;assign 1
+					  LSLS       R3, R3, R2                      ;lsl by pin number
+					  EORS       R1, R1, R3                      ;xor 4th bit
 					  STR        R1, [R0]                        ;store val to ODR
 					  
 					  POP        {PC}
