@@ -8,6 +8,7 @@ int main(void){
 	Delay();
 	GPIO_Init();
 	Kernel_Systick_Init();
+	//Kernel_Systick_Init();
 	
 	while(1){
 		

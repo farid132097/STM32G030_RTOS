@@ -29,7 +29,7 @@ DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000
 DEF_GPIOA_ODR         EQU        DEF_GPIOA_BASE      + 0x00000014
 
 
-DEF_GPIO_PIN_NUMBER   EQU        0x00000002
+DEF_GPIO_PIN_NUMBER   EQU        0x0000000B
 DEF_GPIO_MODER_MASK   EQU        0x00000003
 DEF_GPIO_MODER_INPUT  EQU        0x00000000
 DEF_GPIO_MODER_OUTPUT EQU        0x00000001
@@ -41,8 +41,7 @@ DEF_GPIO_MODER_ANALOG EQU        0x00000003
                       AREA       |.text|, CODE, READONLY
 						  
 						  
-						  
-				      EXPORT     GPIO_Init
+					  EXPORT     GPIO_Init  
 				      EXPORT     GPIO_High
 					  EXPORT     GPIO_Low
 					  EXPORT     GPIO_Toggle
@@ -147,3 +146,5 @@ DelaySome
 					  
                       END                                        ;end of file
     
+	
+	
