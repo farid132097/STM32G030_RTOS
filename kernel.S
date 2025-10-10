@@ -39,11 +39,18 @@ Next_TCB              DCD        0                                 ;pointer to n
 					  
                       ;enlist global functions
 					  EXPORT     Kernel_Systick_Init
+				      EXPORT     Kernel_Idle_Task
 					  EXPORT     SysTick_Handler
 					  IMPORT     GPIO_Toggle
+						  
+Kernel_Idle_Task
+KERNEL_IDLE_LOOP
+					  B          KERNEL_IDLE_LOOP                  ;forever loop
                       
+					  
+					  
 Kernel_Systick_Init
-                      PUSH       {LR}                              ;push return address
+                      ;PUSH       {LR}                              ;push return address
                       LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
@@ -55,27 +62,37 @@ Kernel_Systick_Init
 					  STR        R1,   [R0]                        ;set val to stk_ctrl
 					  
 					  ;Setup PSP for main
-                      ;LDR        R0,   =0x20001000                 ; address of main stack
-                      ;MSR        PSP,  R0                          ; set PSP
-                      ;MRS        R1,   CONTROL
-					  ;LDR        R2,   =2
-                      ;ORRS       R1,   R1, R2                      ; CONTROL.SPSEL = 1 ? use PSP in thread mode
-                      ;MSR        CONTROL, R1
-                      ;ISB
-					  
-					  POP        {PC}
-					  ;BX         LR                                ;return from interrupt
+                      LDR        R0,   =0x20001000                 ;address of main stack
+                      MSR        PSP,  R0                          ;set PSP
+                      MRS        R1,   CONTROL
+					  LDR        R2,   =2
+                      ORRS       R1,   R1, R2                      ;CONTROL.SPSEL = 1 ? use PSP in thread mode
+                      MSR        CONTROL, R1                       ;switch to PSP
+                      ISB                                          ;instruction barrier
+					  BL         Kernel_Idle_Task                  ;call idle task
 					  
 SysTick_Handler
+                      ;Hardware pushed (address wise) R0-R3,R12,LR,PC,xPSR
+					  ;Software pushed (address wise) R11-R4
                       CPSID      I                                 ;disable interrupts
 					  
 					  ;push R4-R11 manually
-                      PUSH       {R4-R7}                           ;push regs
-					  MOV        R4,   R8                          ;copy register
-					  MOV        R5,   R9                          ;copy register
-					  MOV        R6,   R10                         ;copy register
-					  MOV        R7,   R11                         ;copy register
-					  PUSH       {R4-R7}                           ;push regs
+					  MRS        R0,   PSP                         ;load PSP in R0
+					  SUBS       R0,   #32                         ;subtract 32 bytes
+					  STR        R4,   [R0, #0]                    ;load data
+					  STR        R5,   [R0, #4]                    ;load data
+					  STR        R6,   [R0, #8]                    ;load data
+					  STR        R7,   [R0, #12]                   ;load data
+					  MOV        R1,   R8                          ;copy
+					  STR        R1,   [R0, #16]                   ;load data
+					  MOV        R1,   R9                          ;copy
+					  STR        R1,   [R0, #20]                   ;load data
+					  MOV        R1,   R10                         ;copy
+					  STR        R1,   [R0, #24]                   ;load data
+					  MOV        R1,   R11                         ;copy
+					  STR        R1,   [R0, #28]                   ;load data
+					  MSR        PSP,  R0                          ;update new top of stack
+					  
 					  
 					  
 					  ;toggle PA11
@@ -99,12 +116,21 @@ SysTick_Handler
 					  
 					  
 					  ;pop R11-R4 manually
-					  POP        {R4-R7}                           ;pop regs
-					  MOV        R11,  R7                          ;copy register
-					  MOV        R10,  R6                          ;copy register
-					  MOV        R9,   R5                          ;copy register
-					  MOV        R8,   R4                          ;copy register
-					  POP        {R4-R7}                           ;pop regs
+					  MRS        R0,   PSP                         ;load PSP in R0
+					  LDR        R4,   [R0, #0]                    ;load data
+					  LDR        R5,   [R0, #4]                    ;load data
+					  LDR        R6,   [R0, #8]                    ;load data
+					  LDR        R7,   [R0, #12]                   ;load data
+					  LDR        R1,   [R0, #16]                   ;load data
+					  MOV        R8,   R1                          ;copy
+					  LDR        R1,   [R0, #20]                   ;load data
+					  MOV        R9,   R1                          ;copy
+					  LDR        R1,   [R0, #24]                   ;load data
+					  MOV        R10,  R1                          ;copy
+					  LDR        R1,   [R0, #28]                   ;load data
+					  MOV        R11,  R1                          ;copy
+					  ADDS       R0,   #32                         ;add 32 bytes
+					  MSR        PSP,  R0                          ;update new top of stack
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
