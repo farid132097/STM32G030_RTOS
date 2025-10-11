@@ -157,7 +157,7 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>108</LineNumber>
+          <LineNumber>111</LineNumber>
           <EnabledFlag>1</EnabledFlag>
           <Address>134218232</Address>
           <ByteObject>0</ByteObject>
@@ -168,7 +168,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\kernel.s</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\stm32g030_rtos\kernel.s\108</Expression>
+          <Expression>\\stm32g030_rtos\kernel.s\111</Expression>
         </Bp>
       </Breakpoint>
       <MemoryWindow1>

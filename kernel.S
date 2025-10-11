@@ -49,6 +49,9 @@ KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 					  EXPORT     SysTick_Handler
 					  IMPORT     GPIO_Toggle
 						  
+
+
+
 Kernel_Idle_Task
                       ;Idle task, does nothing
 KERNEL_IDLE_LOOP
@@ -76,7 +79,7 @@ Kernel_Task_Params_Init
 					  STR        R1,   [R0]                        ;store task_id val
 					  ;set number of tasks
 					  LDR        R0,   =KER_TASK_NTASK             ;load ntask addr
-					  LDR        R1,   =3
+					  LDR        R1,   =2
 					  STR        R1,   [R0]                        ;store nastk val
 					  
 Kernel_Systick_Init
@@ -100,7 +103,7 @@ Kernel_Systick_Init
                       ORRS       R1,   R1, R2                      ;CONTROL.SPSEL = 1 ? use PSP in thread mode
                       MSR        CONTROL, R1                       ;switch to PSP
                       ISB                                          ;instruction barrier
-					  BL         Kernel_Idle_Task                  ;call idle task
+					  BL         Kernel_Demo_Task0                 ;call task
 					  
 SysTick_Handler
                       ;Hardware pushed (address wise) R0-R3,R12,LR,PC,xPSR
@@ -130,7 +133,7 @@ SysTick_Handler
 					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
 					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
 					  ADD        R0,   R0,  R1                     ;calc offset from psp base
-					  MRS        R1,   PSP                         ;load PSP in R0
+					  MRS        R1,   PSP                         ;load PSP in R1
 					  STR        R1,   [R0]                        ;set val to reg
 					  
 					  ;go to next task
@@ -146,10 +149,8 @@ SysTick_Handler_PSP_UPDT
                       STR        R1,   [R0]                        ;store task_id
 					  
 					  
-					  STR        R1,   [R0]                        ;store to task_id addr
-					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
 					  
-					  
+					  ;do some stuff if necessary
 					  ;toggle PA11
 					  LDR        R0,   =0x50000014                 ;load ODR address
 					  LDR        R1,   [R0]                        ;load ODR val
@@ -160,9 +161,16 @@ SysTick_Handler_PSP_UPDT
 					  STR        R1,   [R0]                        ;store val to ODR
 					  
 					  
+					  ;load PSP according to the new task_id
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R0,   [R0]                        ;load task_id val
+					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
+					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
+					  ADD        R0,   R0,  R1                     ;calc offset from psp base
+					  LDR        R0,   [R0]                        ;load task PSP
 					  
 					  ;pop R11-R4 manually
-					  MRS        R0,   PSP                         ;load PSP in R0
+					  ;MRS        R0,   PSP                         ;load PSP in R0
 					  LDR        R4,   [R0, #0]                    ;load data
 					  LDR        R5,   [R0, #4]                    ;load data
 					  LDR        R6,   [R0, #8]                    ;load data
@@ -190,4 +198,5 @@ PendSV_Handler
 
     
 	
-	
+	                  END
+						  

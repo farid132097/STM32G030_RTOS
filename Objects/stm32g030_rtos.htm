@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\stm32g030_rtos.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\stm32g030_rtos.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6220000: Last Updated: Sat Oct 11 15:24:45 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6220000: Last Updated: Sat Oct 11 18:05:09 2025
 <BR><P>
 <H3>Maximum Stack Usage =         16 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -35,7 +35,7 @@ Mutually Recursive functions
  <LI><a href="#[3]">SVC_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[3]">SVC_Handler</a><BR>
  <LI><a href="#[4]">PendSV_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[4]">PendSV_Handler</a><BR>
  <LI><a href="#[10]">ADC1_IRQHandler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[10]">ADC1_IRQHandler</a><BR>
- <LI><a href="#[2e]">Kernel_Idle_Task</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[2e]">Kernel_Idle_Task</a><BR>
+ <LI><a href="#[2f]">Kernel_Demo_Task0</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[2f]">Kernel_Demo_Task0</a><BR>
 </UL>
 <P>
 <H3>
@@ -323,17 +323,17 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[24]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__user_setup_stackheap
 </UL>
 
-<P><STRONG><a name="[2e]"></a>Kernel_Idle_Task</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text))
+<P><STRONG><a name="[2e]"></a>Kernel_Idle_Task</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text), UNUSED)
 <BR><BR>[Calls]<UL><LI><a href="#[2e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Idle_Task
 </UL>
 <BR>[Called By]<UL><LI><a href="#[2e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Idle_Task
-<LI><a href="#[32]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Systick_Init
 </UL>
 
-<P><STRONG><a name="[2f]"></a>Kernel_Demo_Task0</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text), UNUSED)
+<P><STRONG><a name="[2f]"></a>Kernel_Demo_Task0</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text))
 <BR><BR>[Calls]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task0
 </UL>
 <BR>[Called By]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task0
+<LI><a href="#[32]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Systick_Init
 </UL>
 
 <P><STRONG><a name="[30]"></a>Kernel_Demo_Task1</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text), UNUSED)
@@ -353,7 +353,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[32]"></a>Kernel_Systick_Init</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text))
-<BR><BR>[Calls]<UL><LI><a href="#[2e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Idle_Task
+<BR><BR>[Calls]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task0
 </UL>
 <BR>[Called By]<UL><LI><a href="#[28]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
