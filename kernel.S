@@ -23,34 +23,64 @@ DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 
 
                       ;RAM area starts
-					  AREA    |.data|, DATA, READWRITE, ALIGN=2
+					  AREA       |.data|, DATA, READWRITE, ALIGN=2
 					  
 				      ;enlist global variables
-					  EXPORT     Current_TCB
-                      EXPORT     Next_TCB
+					  EXPORT     KER_TASK_ID
+					  EXPORT     KER_TASK_NTASK
+                      EXPORT     KER_TASK_PSP
 					  
 					  ;assign variables with size
-Current_TCB           DCD        0                                 ;pointer to current task's PSP
-Next_TCB              DCD        0                                 ;pointer to next task's PSP
+KER_TASK_ID           SPACE      4                                 ;current task id
+KER_TASK_NTASK        SPACE      4                                 ;total tasks
+KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 					  
 
                       ;code area starts
                       AREA       |.text|, CODE, READONLY
 					  
                       ;enlist global functions
+					  EXPORT     Kernel_Task_Params_Init
 					  EXPORT     Kernel_Systick_Init
 				      EXPORT     Kernel_Idle_Task
+					  EXPORT     Kernel_Demo_Task0
+					  EXPORT     Kernel_Demo_Task1
+					  EXPORT     Kernel_Demo_Task2
 					  EXPORT     SysTick_Handler
 					  IMPORT     GPIO_Toggle
 						  
 Kernel_Idle_Task
+                      ;Idle task, does nothing
 KERNEL_IDLE_LOOP
 					  B          KERNEL_IDLE_LOOP                  ;forever loop
                       
 					  
+Kernel_Demo_Task0
+                      ;Task0, toggles a Pin
+KERNEL_IDLE_LOOP0
+					  B          KERNEL_IDLE_LOOP0                  ;forever loop
+					  
+Kernel_Demo_Task1
+KERNEL_IDLE_LOOP1
+					  B          KERNEL_IDLE_LOOP1                  ;forever loop
+					  
+Kernel_Demo_Task2
+KERNEL_IDLE_LOOP2
+					  B          KERNEL_IDLE_LOOP2                  ;forever loop
+					  
+					  
+Kernel_Task_Params_Init
+                      ;set first task_id
+                      LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   =0
+					  STR        R1,   [R0]                        ;store task_id val
+					  ;set number of tasks
+					  LDR        R0,   =KER_TASK_NTASK             ;load ntask addr
+					  LDR        R1,   =3
+					  STR        R1,   [R0]                        ;store nastk val
 					  
 Kernel_Systick_Init
-                      ;PUSH       {LR}                              ;push return address
+                      ;Enable SysTick Timer for periodic interruption
                       LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
@@ -61,8 +91,9 @@ Kernel_Systick_Init
 					  MOVS       R1,   #7                          ;mask bit0, bit1 & bit2
 					  STR        R1,   [R0]                        ;set val to stk_ctrl
 					  
-					  ;Setup PSP for main
-                      LDR        R0,   =0x20001000                 ;address of main stack
+					  
+					  ;Setup For using PSP
+                      LDR        R0,   =0x20000800                 ;address of main stack
                       MSR        PSP,  R0                          ;set PSP
                       MRS        R1,   CONTROL
 					  LDR        R2,   =2
@@ -93,6 +124,30 @@ SysTick_Handler
 					  STR        R1,   [R0, #28]                   ;load data
 					  MSR        PSP,  R0                          ;update new top of stack
 					  
+					  ;save PSP to task block area
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R0,   [R0]                        ;load task_id val
+					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
+					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
+					  ADD        R0,   R0,  R1                     ;calc offset from psp base
+					  MRS        R1,   PSP                         ;load PSP in R0
+					  STR        R1,   [R0]                        ;set val to reg
+					  
+					  ;go to next task
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   [R0]                        ;load task_id val
+					  ADDS       R1,   R1, #1                      ;add 1
+					  LDR        R2,   =KER_TASK_NTASK             ;load ntask addr
+					  LDR        R2,   [R2]                        ;load ntask val
+					  CMP        R1,   R2                          ;compare R1 with R2
+					  BLT        SysTick_Handler_PSP_UPDT          ;task_id<ntask
+					  LDR        R1,   =0                          ;roll back
+SysTick_Handler_PSP_UPDT
+                      STR        R1,   [R0]                        ;store task_id
+					  
+					  
+					  STR        R1,   [R0]                        ;store to task_id addr
+					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
 					  
 					  
 					  ;toggle PA11
@@ -104,15 +159,6 @@ SysTick_Handler
 					  EORS       R1,   R1, R3                      ;xor 4th bit
 					  STR        R1,   [R0]                        ;store val to ODR
 					  
-					  ;save test values
-					  MOVS       R4,   #0x0A                       ;set test val
-					  MOVS       R5,   #0x0B                       ;set test val
-					  MOVS       R6,   #0x0C                       ;set test val
-					  MOVS       R7,   #0x0D                       ;set test val
-					  MOV        R8,   R4                          ;set test val
-					  MOV        R9,   R5                          ;set test val
-					  MOV        R10,  R6                          ;set test val
-					  MOV        R11,  R7                          ;set test val
 					  
 					  
 					  ;pop R11-R4 manually
@@ -138,58 +184,6 @@ SysTick_Handler
 					  
 PendSV_Handler
                       CPSID      I                                 ;disable interrupts
-                      LDR        R0,   =Current_TCB                ;load current tcb addr
-                      LDR        R1,   [R0]                        ;R1 current task sp
-					  MOVS       R3,   #32                         ;load val
-					  SUBS       R1,   R1, R3                      ;start = end - 32
-                      STMIA      R1!,  {R4-R7}                     ;store R4-R7, R1 -> start+16
-                      MOV        R2,   R8                          ;copy
-                      STR        R2,   [R1]                        ;store R8
-                      ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R2,   R9                          ;copy
-                      STR        R2,   [R1]                        ;store R8
-                      ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R2,   R10                         ;copy
-                      STR        R2,   [R1]                        ;store R8
-                      ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R2,   R11                         ;copy
-                      STR        R2,   [R1]                        ;store R8
-                      ADDS       R1,   R1, #4                      ;inc +4
-					  STR        R1,   [R0]                        ;save updated SP
-					  
-					  ;load next task
-                      LDR        R0,   =Next_TCB                   ;load next tcb addr
-					  LDR        R1,   [R0]                        ;R1 next task sp
-					  
-					  ;restore 
-					  MOVS       R3,   #32                         ;load val
-					  SUBS       R1,   R1, R3                      ;go to start of saved context
-                      LDMIA      R1!,  {R4-R7}                     ;restore R4-R7, R1 -> start+16
-                      LDR        R2,   [R1]                        ;load 
-					  ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R8,   R2                          ;copy
-					  
-					  LDR        R2,   [R1]                        ;load 
-					  ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R9,   R2                          ;copy
-					  
-					  LDR        R2,   [R1]                        ;load 
-					  ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R10,  R2                           ;copy
-					  
-					  LDR        R2,   [R1]                        ;load 
-					  ADDS       R1,   R1, #4                      ;inc +4
-					  MOV        R11,  R2                           ;copy
-					  
-                      ;switch PSP to next task
-                      MSR        PSP,  R1                           ;switch PSP
-					  
-					  ;update Current_TCB pointer
-					  LDR        R0,   =Current_TCB                ;load current tcb addr
-					  LDR        R2,   =Next_TCB                   ;load next tcb addr
-					  LDR        R3,   [R2]                        ;R3 = next saved-SP (end)
-					  STR        R3,   [R0]                        ;store
-					  
                       CPSIE      I                                 ;enable interrupt
                       BX LR                                        ;return from exception
 					  

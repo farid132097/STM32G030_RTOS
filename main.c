@@ -9,6 +9,7 @@ int main(void){
 	
 	Delay();
 	GPIO_Init();
+	Kernel_Task_Params_Init();
 	Kernel_Systick_Init();
 	//Kernel_Systick_Init();
 	
