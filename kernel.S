@@ -54,25 +54,21 @@ KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 
 Kernel_Idle_Task
                       ;Idle task, does nothing
-KERNEL_IDLE_LOOP
-					  B          KERNEL_IDLE_LOOP                  ;forever loop
+					  B          .                                  ;forever loop
                       
 					  
 Kernel_Demo_Task0
-                      ;Task0, toggles a Pin
-KERNEL_IDLE_LOOP0
-					  B          KERNEL_IDLE_LOOP0                  ;forever loop
+					  B          .                                  ;forever loop
 					  
 Kernel_Demo_Task1
-KERNEL_IDLE_LOOP1
-					  B          KERNEL_IDLE_LOOP1                  ;forever loop
+					  B          .                                  ;forever loop
 					  
 Kernel_Demo_Task2
-KERNEL_IDLE_LOOP2
-					  B          KERNEL_IDLE_LOOP2                  ;forever loop
+					  B          .                                  ;forever loop
 					  
 					  
 Kernel_Task_Params_Init
+                      PUSH       {LR}
                       ;set first task_id
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   =0
@@ -81,6 +77,44 @@ Kernel_Task_Params_Init
 					  LDR        R0,   =KER_TASK_NTASK             ;load ntask addr
 					  LDR        R1,   =2
 					  STR        R1,   [R0]                        ;store nastk val
+					  
+					  ;task0
+					  LDR        R0,   =0x20000F00                 ;PSP top
+                      SUBS       R0,   #32                         ;make space for R4-R11
+                      SUBS       R0,   #32                         ;make space for hardware frame
+                      MOVS       R1,   #0
+                      STR        R1,   [R0, #0]                    ;R0
+                      STR        R1,   [R0, #4]                    ;R1
+                      STR        R1,   [R0, #8]                    ;R2
+                      STR        R1,   [R0, #12]                   ;R3
+                      STR        R1,   [R0, #16]                   ;R12
+                      STR        R1,   [R0, #20]                   ;LR
+                      LDR        R1,   =Kernel_Demo_Task0
+                      STR        R1,   [R0, #24]                   ;PC
+                      LDR        R1,   =0x01000000
+                      STR        R1,   [R0, #28]                   ;xPSR (Thumb)
+                      LDR        R1,   =KER_TASK_PSP
+                      STR        R0,   [R1]                        ;save PSP
+					  
+					  ;task1
+					  LDR        R0,   =0x20000E00                 ;PSP top
+                      SUBS       R0,   #32                         ;make space for R4-R11
+                      SUBS       R0,   #32                         ;make space for hardware frame
+                      MOVS       R1,   #0
+                      STR        R1,   [R0, #0]                    ;R0
+                      STR        R1,   [R0, #4]                    ;R1
+                      STR        R1,   [R0, #8]                    ;R2
+                      STR        R1,   [R0, #12]                   ;R3
+                      STR        R1,   [R0, #16]                   ;R12
+                      STR        R1,   [R0, #20]                   ;LR
+                      LDR        R1,   =Kernel_Demo_Task1
+                      STR        R1,   [R0, #24]                   ;PC
+                      LDR        R1,   =0x01000000
+                      STR        R1,   [R0, #28]                   ;xPSR (Thumb)
+                      LDR        R1,   =KER_TASK_PSP
+					  ADDS       R1,   #4
+                      STR        R0,   [R1]                        ;save PSP
+					  POP        {PC}
 					  
 Kernel_Systick_Init
                       ;Enable SysTick Timer for periodic interruption
@@ -96,7 +130,8 @@ Kernel_Systick_Init
 					  
 					  
 					  ;Setup For using PSP
-                      LDR        R0,   =0x20000800                 ;address of main stack
+                      LDR        R0,   =0x20001000                 ;address of main stack
+					  LDR        R0,  [R0]                         ;PSP for task0
                       MSR        PSP,  R0                          ;set PSP
                       MRS        R1,   CONTROL
 					  LDR        R2,   =2
@@ -143,9 +178,9 @@ SysTick_Handler
 					  LDR        R2,   =KER_TASK_NTASK             ;load ntask addr
 					  LDR        R2,   [R2]                        ;load ntask val
 					  CMP        R1,   R2                          ;compare R1 with R2
-					  BLT        SysTick_Handler_PSP_UPDT          ;task_id<ntask
+					  BLT        WRAP_TASK_ID                      ;task_id<ntask
 					  LDR        R1,   =0                          ;roll back
-SysTick_Handler_PSP_UPDT
+WRAP_TASK_ID
                       STR        R1,   [R0]                        ;store task_id
 					  
 					  
