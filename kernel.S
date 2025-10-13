@@ -203,7 +203,7 @@ WRAP_TASK_ID
 					  LDR        R0,   [R0]                        ;load task PSP
 					  
 					  ;pop R11-R4 manually
-					  MRS        R0,   PSP                         ;load PSP in R0
+					  ;MRS        R0,   PSP                         ;load PSP in R0
 					  LDR        R4,   [R0, #0]                    ;load data
 					  LDR        R5,   [R0, #4]                    ;load data
 					  LDR        R6,   [R0, #8]                    ;load data
