@@ -1,4 +1,3 @@
-
                       THUMB                                      ;enable thumb mode
 				      PRESERVE8                                  ;8 bytes stack alignment
 	
@@ -65,7 +64,7 @@ Kernel_Demo_Task1
 					  
 Kernel_Demo_Task2
 					  B          .                                  ;forever loop
-					  
+                      
 					  
 Kernel_Task_Params_Init
                       PUSH       {LR}
@@ -115,9 +114,10 @@ Kernel_Task_Params_Init
 					  ADDS       R1,   #4
                       STR        R0,   [R1]                        ;save PSP
 					  POP        {PC}
-					  
+
+
 Kernel_Systick_Init
-                      ;Enable SysTick Timer for periodic interruption
+                      ;PUSH       {LR}                              ;push return address
                       LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
@@ -128,17 +128,15 @@ Kernel_Systick_Init
 					  MOVS       R1,   #7                          ;mask bit0, bit1 & bit2
 					  STR        R1,   [R0]                        ;set val to stk_ctrl
 					  
-					  
-					  ;Setup For using PSP
+					  ;Setup PSP for main
                       LDR        R0,   =0x20001000                 ;address of main stack
-					  LDR        R0,  [R0]                         ;PSP for task0
                       MSR        PSP,  R0                          ;set PSP
                       MRS        R1,   CONTROL
 					  LDR        R2,   =2
                       ORRS       R1,   R1, R2                      ;CONTROL.SPSEL = 1 ? use PSP in thread mode
                       MSR        CONTROL, R1                       ;switch to PSP
                       ISB                                          ;instruction barrier
-					  BL         Kernel_Demo_Task0                 ;call task
+					  BL         Kernel_Demo_Task0                 ;call idle task
 					  
 SysTick_Handler
                       ;Hardware pushed (address wise) R0-R3,R12,LR,PC,xPSR
@@ -185,7 +183,6 @@ WRAP_TASK_ID
 					  
 					  
 					  
-					  ;do some stuff if necessary
 					  ;toggle PA11
 					  LDR        R0,   =0x50000014                 ;load ODR address
 					  LDR        R1,   [R0]                        ;load ODR val
@@ -194,6 +191,7 @@ WRAP_TASK_ID
 					  LSLS       R3,   R3, R2                      ;lsl by pin number
 					  EORS       R1,   R1, R3                      ;xor 4th bit
 					  STR        R1,   [R0]                        ;store val to ODR
+					  
 					  
 					  
 					  ;load PSP according to the new task_id
@@ -205,7 +203,7 @@ WRAP_TASK_ID
 					  LDR        R0,   [R0]                        ;load task PSP
 					  
 					  ;pop R11-R4 manually
-					  ;MRS        R0,   PSP                         ;load PSP in R0
+					  MRS        R0,   PSP                         ;load PSP in R0
 					  LDR        R4,   [R0, #0]                    ;load data
 					  LDR        R5,   [R0, #4]                    ;load data
 					  LDR        R6,   [R0, #8]                    ;load data
@@ -227,11 +225,11 @@ WRAP_TASK_ID
 					  
 PendSV_Handler
                       CPSID      I                                 ;disable interrupts
+                      ;do some task here
                       CPSIE      I                                 ;enable interrupt
                       BX LR                                        ;return from exception
 					  
 
     
 	
-	                  END
-						  
+	
