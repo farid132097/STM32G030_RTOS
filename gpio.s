@@ -48,39 +48,33 @@ DEF_GPIO_MODER_ANALOG EQU        0x00000003
 					  EXPORT     Delay
 					  
 
+
 GPIO_Init
-                      ;save return address
+                      ;init gpio for debug and task indication PA0-PA3
                       PUSH       {LR}                            ;push return address
 					  
 					  ;enable clock from rcc
-                      LDR        R0, =DEF_RCC_IOPENR             ;load IOPENR address
-					  LDR        R1, [R0]                        ;load IOPENR val
-					  LDR        R2, =0x00000001                 ;mask bit0
-	                  ORRS       R1, R1, R2                      ;IOPENR |=(1<<0) 
-					  STR        R1, [R0]                        ;store val to IOPENR
+                      LDR        R0,   =DEF_RCC_IOPENR             ;load IOPENR address
+					  LDR        R1,   [R0]                        ;load IOPENR val
+					  LDR        R2,   =0x00000001                 ;mask bit0
+	                  ORRS       R1,   R1, R2                      ;set bit 0
+					  STR        R1,   [R0]                        ;store val to IOPENR
 					  
-					  ;set ODR pin high to turn off LED
-					  LDR        R0, =DEF_GPIOA_ODR              ;load ODR address
-					  LDR        R1, [R0]                        ;load ODR val
-					  MOVS       R2, #0x01                       ;assign 1
-					  LDR        R3, =DEF_GPIO_PIN_NUMBER        ;mask pin number
-					  LSLS       R2, R2, R3                      ;lsl by pin number
-					  ORRS       R1, R1, R2                      ;set bit of the pin
-					  STR        R1, [R0]                        ;store val to ODR
+					  ;set ODR pin low
+					  LDR        R0,   =DEF_GPIOA_ODR              ;load ODR address
+					  LDR        R1,   [R0]                        ;load ODR val
+					  LDR        R2,   =0xFFF0                     ;bit0-bit3 clear
+					  ANDS       R1,   R1, R2                      ;set bit of the pins
+					  STR        R1,   [R0]                        ;store val to ODR
 					  
 					  ;set pin as general purpose i/o
-					  LDR        R0, =DEF_GPIOA_MODER            ;load MODER address
-					  LDR        R1, [R0]                        ;load MODER val
-					  LDR        R2, =DEF_GPIO_PIN_NUMBER        ;load pin number
-					  LSLS       R2, R2, #0x01                   ;left shift to x2
-					  LDR        R3, =DEF_GPIO_MODER_MASK        ;load gp output val
-					  LSLS       R3, R3, R2                      ;lsl by pin number
-					  MVNS       R3, R3                          ;bitwise not
-					  ANDS       R1, R1, R3                      ;clear moder bits
-					  LDR        R3, =DEF_GPIO_MODER_OUTPUT      ;load gp output val
-					  LSLS       R3, R3, R2                      ;lsl by pin number
-					  ORRS       R1, R1, R3                      ;or with output val
-					  STR        R1, [R0]                        ;store val to MODER
+					  LDR        R0,   =DEF_GPIOA_MODER            ;load MODER address
+					  LDR        R1,   [R0]                        ;load MODER val
+					  LDR        R2,   =0xFFFFFF00                 ;to clear mode0-3
+					  ANDS       R1,   R1, R2                      ;clear mode0-3
+					  LDR        R2,   =0x00000055                 ;to output mode
+					  ORRS       R1,   R1, R2                      ;set output mode
+					  STR        R1,   [R0]                        ;store val GPIOA
 					  
 					  ;return from function
 					  POP        {PC}                            ;jump to return address
