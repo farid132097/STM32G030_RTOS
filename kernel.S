@@ -68,35 +68,32 @@ Kernel_Idle_Task
 					  
 Kernel_Demo_Task0
                       ;toggle pin PA1
-					  LDR        R0,   =0x50000014                 ;load ODR address
-					  LDR        R1,   [R0]                        ;load ODR val
-					  LDR        R2,   =1                          ;mask pin number
-					  MOVS       R3,   #0x01                       ;assign 1
-					  LSLS       R3,   R3, R2                      ;lsl by pin number
-					  EORS       R1,   R1, R3                      ;xor bit
-					  STR        R1,   [R0]                        ;store val to ODR
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00000002                 ;bit1 set
+					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00020000                 ;bit1 reset
+					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task0                 ;forever loop
 					  
 Kernel_Demo_Task1
 					  ;toggle pin PA2
-					  LDR        R0,   =0x50000014                 ;load ODR address
-					  LDR        R1,   [R0]                        ;load ODR val
-					  LDR        R2,   =2                          ;mask pin number
-					  MOVS       R3,   #0x01                       ;assign 1
-					  LSLS       R3,   R3, R2                      ;lsl by pin number
-					  EORS       R1,   R1, R3                      ;xor bit
-					  STR        R1,   [R0]                        ;store val to ODR
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00000004                 ;bit1 set
+					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00040000                 ;bit1 reset
+					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task1                 ;forever loop
 					  
 Kernel_Demo_Task2
 					  ;toggle pin PA3
-					  LDR        R0,   =0x50000014                 ;load ODR address
-					  LDR        R1,   [R0]                        ;load ODR val
-					  LDR        R2,   =3                          ;mask pin number
-					  MOVS       R3,   #0x01                       ;assign 1
-					  LSLS       R3,   R3, R2                      ;lsl by pin number
-					  EORS       R1,   R1, R3                      ;xor bit
-					  STR        R1,   [R0]                        ;store val to ODR
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00000008                 ;bit1 set
+					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00080000                 ;bit1 reset
+					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task2                 ;forever loop
                       
 					  
@@ -136,7 +133,6 @@ Kernel_Task_Params_Init
                       STR        R1,   [R0, #56]                   ;PC
                       LDR        R1,   =0x01000000
                       STR        R1,   [R0, #60]                   ;xPSR (Thumb)
-					  LDR        R0,   =0x20000F00                 ;test---------------------------------<<
                       LDR        R1,   =KER_TASK_PSP
                       STR        R0,   [R1]                        ;save PSP
 					  
@@ -229,6 +225,12 @@ SysTick_Handler
 					  ;Software pushed (address wise) R11-R4
                       CPSID      I                                 ;disable interrupts
 					  
+					  
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00000001                 ;bit0 set
+					  STR        R1,   [R0]                        ;store val
+					  
+					  
 					  ;push R4-R11 manually
 					  MRS        R0,   PSP                         ;load PSP in R0
 					  SUBS       R0,   #32                         ;subtract 32 bytes
@@ -269,14 +271,14 @@ SKIP_WRAP_TASK_ID
 					  
 					  
 					  
-					  ;toggle PA11
-					  LDR        R0,   =0x50000014                 ;load ODR address
-					  LDR        R1,   [R0]                        ;load ODR val
-					  MOVS       R2,   #0x00                       ;pin number
-					  MOVS       R3,   #0x01                       ;assign 1
-					  LSLS       R3,   R3, R2                      ;lsl by pin number
-					  EORS       R1,   R1, R3                      ;xor bit
-					  STR        R1,   [R0]                        ;store val to ODR
+					  ;toggle PA0
+					  ;LDR        R0,   =0x50000014                 ;load ODR address
+					  ;LDR        R1,   [R0]                        ;load ODR val
+					  ;MOVS       R2,   #0x00                       ;pin number
+					  ;MOVS       R3,   #0x01                       ;assign 1
+					  ;LSLS       R3,   R3, R2                      ;lsl by pin number
+					  ;EORS       R1,   R1, R3                      ;xor bit
+					  ;STR        R1,   [R0]                        ;store val to ODR
 					  
 					  
 					  
@@ -289,7 +291,6 @@ SKIP_WRAP_TASK_ID
 					  LDR        R0,   [R0]                        ;load task PSP
 					  
 					  ;pop R11-R4 manually
-					  ;MRS        R0,   PSP                         ;load PSP in R0
 					  LDR        R4,   [R0, #0]                    ;load data
 					  LDR        R5,   [R0, #4]                    ;load data
 					  LDR        R6,   [R0, #8]                    ;load data
@@ -304,6 +305,10 @@ SKIP_WRAP_TASK_ID
 					  MOV        R11,  R1                          ;copy
 					  ADDS       R0,   #32                         ;add 32 bytes
 					  MSR        PSP,  R0                          ;update new top of stack
+					  
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00010000                 ;bit0 reset
+					  STR        R1,   [R0]                        ;store val
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt

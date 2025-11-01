@@ -51,7 +51,7 @@ DEF_GPIO_MODER_ANALOG EQU        0x00000003
 
 GPIO_Init
                       ;init gpio for debug and task indication PA0-PA3
-                      PUSH       {LR}                            ;push return address
+                      PUSH       {LR}                              ;push return address
 					  
 					  ;enable clock from rcc
                       LDR        R0,   =DEF_RCC_IOPENR             ;load IOPENR address
@@ -77,7 +77,7 @@ GPIO_Init
 					  STR        R1,   [R0]                        ;store val GPIOA
 					  
 					  ;return from function
-					  POP        {PC}                            ;jump to return address
+					  POP        {PC}                              ;jump to return address
 					  
 					  
 					  
