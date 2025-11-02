@@ -56,6 +56,7 @@ DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 ;;============================define systick addresses starting==============================;; 
 DEF_KER_MAX_NTASK     EQU        0x0000000A                        ;max 10 tasks
 DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes stack
+DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 ;;===============================define systick addresses end================================;;
 
 
@@ -85,7 +86,7 @@ DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes st
 KER_TASK_ID           SPACE      4                                 ;current task id
 KER_TASK_NTASK        SPACE      4                                 ;total tasks
 KER_TASK_PSP          SPACE      12                                ;PSP for 10 tasks
-KER_TASK_STACK        SPACE      2560                              ;stack size for 10 tasks
+KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE               ;total stack space
 ;;=============================global variable definition end================================;; 
 
 
@@ -229,7 +230,7 @@ Kernel_Init
                       PUSH       {LR}
 					  ;set first task_id
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R1,   =0x00000000                 ;start from 0
+					  LDR        R1,   =0x00000001                 ;start from 0
 					  STR        R1,   [R0]                        ;store task_id val
 					  POP        {PC}
 					  
@@ -238,9 +239,14 @@ Kernel_Task_Create
 					  ;task0 stack space init
 					  
 					  LDR        R2,   =DEF_KER_STACK_SIZE         ;load each stack size
-					  LDR        R3,   =KER_TASK_ID                ;load current task id
+					  LDR        R3,   =KER_TASK_ID                ;load current task id addr
+					  LDR        R3,   [R3]                        ;load current task id
 					  MULS       R2,   R3, R2                      ;multiply R2 & R3
+					  MOV        R12,  R2                          ;copy val
 					  LDR        R3,   =KER_TASK_STACK             ;PSP current top
+					  LDR        R2,   =DEF_KER_STACK_SPACE        ;load stack space
+					  ADDS       R3,   R3, R2                      ;add offset
+					  MOV        R2,   R12                         ;copy val
 					  SUBS       R3,   R3, R2                      ;stack_top-task_id*stack_size
 					  
                       SUBS       R0,   #32                         ;make space for R4-R11
