@@ -14,6 +14,8 @@
 
 void    Kernel_Task_Params_Init(void);
 void    Kernel_Systick_Init(void);
+void    Kernel_Init(void);
+void    Kernel_Task_Create(void);
 
 #endif
 

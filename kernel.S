@@ -29,6 +29,7 @@
 ;;===============================define address bases starting===============================;; 
 DEF_CODE_BASE         EQU        0x00000000
 DEF_SRAM_BASE         EQU        0x20000000
+EDF_SRAMM_END         EQU        0x20001FFF
 DEF_PERIPHERAL_BASE   EQU        0x40000000
 DEF_FLASH_BASE        EQU        DEF_CODE_BASE       + 0x00000000
 DEF_SCS_BASE          EQU        0xE000E010
@@ -48,6 +49,15 @@ DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
 DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 ;;===============================define systick addresses end================================;;
 	
+
+
+
+
+;;============================define systick addresses starting==============================;; 
+DEF_KER_MAX_NTASK     EQU        0x0000000A                        ;max 10 tasks
+DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes stack
+;;===============================define systick addresses end================================;;
+
 
 
 
@@ -74,7 +84,7 @@ DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 ;;===========================global variable definition starting=============================;; 
 KER_TASK_ID           SPACE      4                                 ;current task id
 KER_TASK_NTASK        SPACE      4                                 ;total tasks
-KER_TASK_PSP          SPACE      40                                ;PSP for 10 tasks
+KER_TASK_PSP          SPACE      12                                ;PSP for 10 tasks
 KER_TASK_STACK        SPACE      2560                              ;stack size for 10 tasks
 ;;=============================global variable definition end================================;; 
 
@@ -97,6 +107,8 @@ KER_TASK_STACK        SPACE      2560                              ;stack size f
 					  EXPORT     Kernel_Demo_Task0
 					  EXPORT     Kernel_Demo_Task1
 					  EXPORT     Kernel_Demo_Task2
+					  EXPORT     Kernel_Init
+					  EXPORT     Kernel_Task_Create
 					  EXPORT     SysTick_Handler
 ;;===========================global function declaration end=================================;; 
 
@@ -213,7 +225,52 @@ Kernel_Demo_Task2
 					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task2                 ;forever loop
                       
+Kernel_Init
+                      PUSH       {LR}
+					  ;set first task_id
+                      LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   =0x00000000                 ;start from 0
+					  STR        R1,   [R0]                        ;store task_id val
+					  POP        {PC}
 					  
+Kernel_Task_Create
+                      PUSH       {LR}
+					  ;task0 stack space init
+					  
+					  LDR        R2,   =DEF_KER_STACK_SIZE         ;load each stack size
+					  LDR        R3,   =KER_TASK_ID                ;load current task id
+					  MULS       R2,   R3, R2                      ;multiply R2 & R3
+					  LDR        R3,   =KER_TASK_STACK             ;PSP current top
+					  SUBS       R3,   R3, R2                      ;stack_top-task_id*stack_size
+					  
+                      SUBS       R0,   #32                         ;make space for R4-R11
+                      SUBS       R0,   #32                         ;make space for hardware frame
+                      MOVS       R1,   #0
+					  ;task0 software stack
+					  STR        R1,   [R0, #0]                    ;R4
+					  STR        R1,   [R0, #4]                    ;R5
+					  STR        R1,   [R0, #8]                    ;R6
+					  STR        R1,   [R0, #12]                   ;R7
+					  STR        R1,   [R0, #16]                   ;R8
+					  STR        R1,   [R0, #20]                   ;R9
+					  STR        R1,   [R0, #24]                   ;R10
+					  STR        R1,   [R0, #28]                   ;R11
+					  ;task0 hardware stack
+                      STR        R1,   [R0, #32]                   ;R0
+                      STR        R1,   [R0, #36]                   ;R1
+                      STR        R1,   [R0, #40]                   ;R2
+                      STR        R1,   [R0, #44]                   ;R3
+                      STR        R1,   [R0, #48]                   ;R12
+                      STR        R1,   [R0, #52]                   ;LR
+                      LDR        R1,   =Kernel_Demo_Task0
+                      STR        R1,   [R0, #56]                   ;PC
+                      LDR        R1,   =0x01000000
+                      STR        R1,   [R0, #60]                   ;xPSR (Thumb)
+                      LDR        R1,   =KER_TASK_PSP
+                      STR        R0,   [R1]                        ;save PSP
+					  POP        {PC}
+
+
 Kernel_Task_Params_Init
                       PUSH       {LR}
                       ;set first task_id
@@ -337,8 +394,8 @@ Kernel_Systick_Init
 					  B          Kernel_Demo_Task0                 ;call a task
 					  
 SysTick_Handler
-                      ;Hardware pushed (address wise) R0-R3,R12,LR,PC,xPSR
-					  ;Software pushed (address wise) R11-R4
+                      ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
+					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
 					  
 					  
@@ -396,8 +453,8 @@ PendSV_Handler
 					  
 					  
 					  END
-						  
-						  
+					  
+					  
 
     
 	
