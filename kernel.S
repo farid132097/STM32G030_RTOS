@@ -4,16 +4,29 @@
  ; Author        : MD. Faridul Islam (faridmdislam@gmail.com)
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : Oct 14, 2025, 16:02 PM
+ ; Last Modified : Nov 02, 2025, 11:55 AM
 
 
 
+
+;;=============================system type definition starting===============================;; 
                       THUMB                                      ;enable thumb mode
 				      PRESERVE8                                  ;8 bytes stack alignment
-	
-                      AREA       |.constdata|, DATA, READONLY
+;;===============================system type definition end==================================;; 
 
-;define necessary address bases (constants)
+
+
+
+
+;;============================constant area definition starting==============================;; 
+                      AREA       |.constdata|, DATA, READONLY
+;;==============================constant area definition end=================================;; 
+
+
+
+
+
+;;===============================define address bases starting===============================;; 
 DEF_CODE_BASE         EQU        0x00000000
 DEF_SRAM_BASE         EQU        0x20000000
 DEF_PERIPHERAL_BASE   EQU        0x40000000
@@ -22,33 +35,62 @@ DEF_SCS_BASE          EQU        0xE000E010
 DEF_APB1_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00000000
 DEF_APB2_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00010000
 DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
+;;=================================define address bases end==================================;; 
 
-;define systick related register addresses
+
+
+
+
+;;============================define systick addresses starting==============================;; 
 DEF_STK_CTRL          EQU        DEF_SCS_BASE        + 0x00000000
 DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004
 DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
 DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
+;;===============================define systick addresses end================================;;
 	
 
 
-                      ;RAM area starts
+
+
+;;==============================RAM area definition starting=================================;; 
 					  AREA       |.data|, DATA, READWRITE, ALIGN=2
-					  
-				      ;enlist global variables
+;;================================RAM area definition end====================================;; 
+
+
+
+
+
+;;=========================global variable declaration starting==============================;; 
 					  EXPORT     KER_TASK_ID
 					  EXPORT     KER_TASK_NTASK
                       EXPORT     KER_TASK_PSP
-					  
-					  ;assign variables with size
+					  EXPORT     KER_TASK_STACK
+;;===========================global variable declaration end=================================;; 
+
+
+
+
+
+;;===========================global variable definition starting=============================;; 
 KER_TASK_ID           SPACE      4                                 ;current task id
 KER_TASK_NTASK        SPACE      4                                 ;total tasks
-KER_TASK_PSP          SPACE      16                                ;PSP of tasks
-					  
+KER_TASK_PSP          SPACE      40                                ;PSP for 10 tasks
+KER_TASK_STACK        SPACE      2560                              ;stack size for 10 tasks
+;;=============================global variable definition end================================;; 
 
-                      ;code area starts
+
+
+
+
+;;==============================code area definition starting================================;; 
                       AREA       |.text|, CODE, READONLY
-					  
-                      ;enlist global functions
+;;=================================code area definition end==================================;; 
+
+
+
+
+
+;;=========================global function declaration starting==============================;; 
 					  EXPORT     Kernel_Task_Params_Init
 					  EXPORT     Kernel_Systick_Init
 				      EXPORT     Kernel_Idle_Task
@@ -56,25 +98,39 @@ KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 					  EXPORT     Kernel_Demo_Task1
 					  EXPORT     Kernel_Demo_Task2
 					  EXPORT     SysTick_Handler
-					  IMPORT     GPIO_Toggle
+;;===========================global function declaration end=================================;; 
 
 
+
+
+
+;;===========================macro for gpio set starting=====================================;; 
                       MACRO
                       MACRO_GPIO_SET
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00000001                 ;bit0 set
 					  STR        R1,   [R0]                        ;store val
 					  MEND
-					  
-					  
+;;=============================macro for gpio set end========================================;; 
+
+
+
+
+
+;;===========================macro for gpio clear starting===================================;; 
 					  MACRO
                       MACRO_GPIO_CLEAR
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00010000                 ;bit0 clear
 					  STR        R1,   [R0]                        ;store val
 					  MEND
+;;=============================macro for gpio clear end======================================;; 
 
 
+
+
+
+;;===========================macro for pushing r4-r11 starting===============================;; 
                       MACRO
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MRS        R0,   PSP                         ;load PSP in R0
@@ -93,7 +149,13 @@ KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 					  STR        R1,   [R0, #28]                   ;load data
 					  MSR        PSP,  R0                          ;update new top of stack
 					  MEND
-					  
+;;============================macro for pushing r4-r11 end==================================;; 
+
+
+
+
+
+;;===========================macro for popping r4-r11 starting==============================;; 
 					  MACRO
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
 					  LDR        R4,   [R0, #0]                    ;load data
@@ -111,6 +173,9 @@ KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 					  ADDS       R0,   #32                         ;add 32 bytes
 					  MSR        PSP,  R0                          ;update new top of stack
                       MEND
+;;==============================macro for popping r4-r11 end================================;; 
+
+
 
 
 Kernel_Idle_Task
@@ -327,6 +392,12 @@ PendSV_Handler
                       CPSIE      I                                 ;enable interrupt
                       BX LR                                        ;return from exception
 					  
+					  
+					  
+					  
+					  END
+						  
+						  
 
     
 	
