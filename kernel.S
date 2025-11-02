@@ -57,8 +57,60 @@ KER_TASK_PSP          SPACE      16                                ;PSP of tasks
 					  EXPORT     Kernel_Demo_Task2
 					  EXPORT     SysTick_Handler
 					  IMPORT     GPIO_Toggle
-						  
 
+
+                      MACRO
+                      MACRO_GPIO_SET
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00000001                 ;bit0 set
+					  STR        R1,   [R0]                        ;store val
+					  MEND
+					  
+					  
+					  MACRO
+                      MACRO_GPIO_CLEAR
+					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  LDR        R1,   =0x00010000                 ;bit0 clear
+					  STR        R1,   [R0]                        ;store val
+					  MEND
+
+
+                      MACRO
+					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
+					  MRS        R0,   PSP                         ;load PSP in R0
+					  SUBS       R0,   #32                         ;subtract 32 bytes
+					  STR        R4,   [R0, #0]                    ;load data
+					  STR        R5,   [R0, #4]                    ;load data
+					  STR        R6,   [R0, #8]                    ;load data
+					  STR        R7,   [R0, #12]                   ;load data
+					  MOV        R1,   R8                          ;copy
+					  STR        R1,   [R0, #16]                   ;load data
+					  MOV        R1,   R9                          ;copy
+					  STR        R1,   [R0, #20]                   ;load data
+					  MOV        R1,   R10                         ;copy
+					  STR        R1,   [R0, #24]                   ;load data
+					  MOV        R1,   R11                         ;copy
+					  STR        R1,   [R0, #28]                   ;load data
+					  MSR        PSP,  R0                          ;update new top of stack
+					  MEND
+					  
+					  MACRO
+					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
+					  LDR        R4,   [R0, #0]                    ;load data
+					  LDR        R5,   [R0, #4]                    ;load data
+					  LDR        R6,   [R0, #8]                    ;load data
+					  LDR        R7,   [R0, #12]                   ;load data
+					  LDR        R1,   [R0, #16]                   ;load data
+					  MOV        R8,   R1                          ;copy
+					  LDR        R1,   [R0, #20]                   ;load data
+					  MOV        R9,   R1                          ;copy
+					  LDR        R1,   [R0, #24]                   ;load data
+					  MOV        R10,  R1                          ;copy
+					  LDR        R1,   [R0, #28]                   ;load data
+					  MOV        R11,  R1                          ;copy
+					  ADDS       R0,   #32                         ;add 32 bytes
+					  MSR        PSP,  R0                          ;update new top of stack
+                      MEND
 
 
 Kernel_Idle_Task
@@ -199,7 +251,6 @@ Kernel_Task_Params_Init
 
 
 Kernel_Systick_Init
-                      ;PUSH       {LR}                              ;push return address
                       LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
@@ -226,27 +277,9 @@ SysTick_Handler
                       CPSID      I                                 ;disable interrupts
 					  
 					  
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00000001                 ;bit0 set
-					  STR        R1,   [R0]                        ;store val
+					  MACRO_GPIO_SET
 					  
-					  
-					  ;push R4-R11 manually
-					  MRS        R0,   PSP                         ;load PSP in R0
-					  SUBS       R0,   #32                         ;subtract 32 bytes
-					  STR        R4,   [R0, #0]                    ;load data
-					  STR        R5,   [R0, #4]                    ;load data
-					  STR        R6,   [R0, #8]                    ;load data
-					  STR        R7,   [R0, #12]                   ;load data
-					  MOV        R1,   R8                          ;copy
-					  STR        R1,   [R0, #16]                   ;load data
-					  MOV        R1,   R9                          ;copy
-					  STR        R1,   [R0, #20]                   ;load data
-					  MOV        R1,   R10                         ;copy
-					  STR        R1,   [R0, #24]                   ;load data
-					  MOV        R1,   R11                         ;copy
-					  STR        R1,   [R0, #28]                   ;load data
-					  MSR        PSP,  R0                          ;update new top of stack
+					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  
 					  ;save PSP to task block area
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
@@ -271,17 +304,6 @@ SKIP_WRAP_TASK_ID
 					  
 					  
 					  
-					  ;toggle PA0
-					  ;LDR        R0,   =0x50000014                 ;load ODR address
-					  ;LDR        R1,   [R0]                        ;load ODR val
-					  ;MOVS       R2,   #0x00                       ;pin number
-					  ;MOVS       R3,   #0x01                       ;assign 1
-					  ;LSLS       R3,   R3, R2                      ;lsl by pin number
-					  ;EORS       R1,   R1, R3                      ;xor bit
-					  ;STR        R1,   [R0]                        ;store val to ODR
-					  
-					  
-					  
 					  ;load PSP according to the new task_id
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R0,   [R0]                        ;load task_id val
@@ -290,25 +312,10 @@ SKIP_WRAP_TASK_ID
 					  ADD        R0,   R0,  R1                     ;calc offset from psp base
 					  LDR        R0,   [R0]                        ;load task PSP
 					  
-					  ;pop R11-R4 manually
-					  LDR        R4,   [R0, #0]                    ;load data
-					  LDR        R5,   [R0, #4]                    ;load data
-					  LDR        R6,   [R0, #8]                    ;load data
-					  LDR        R7,   [R0, #12]                   ;load data
-					  LDR        R1,   [R0, #16]                   ;load data
-					  MOV        R8,   R1                          ;copy
-					  LDR        R1,   [R0, #20]                   ;load data
-					  MOV        R9,   R1                          ;copy
-					  LDR        R1,   [R0, #24]                   ;load data
-					  MOV        R10,  R1                          ;copy
-					  LDR        R1,   [R0, #28]                   ;load data
-					  MOV        R11,  R1                          ;copy
-					  ADDS       R0,   #32                         ;add 32 bytes
-					  MSR        PSP,  R0                          ;update new top of stack
 					  
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00010000                 ;bit0 reset
-					  STR        R1,   [R0]                        ;store val
+					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
+					  
+					  MACRO_GPIO_CLEAR
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
