@@ -72,10 +72,11 @@ DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 
 
 ;;=========================global variable declaration starting==============================;; 
+                      EXPORT     KER_TASK_STACK
 					  EXPORT     KER_TASK_ID
-					  EXPORT     KER_TASK_NTASK
+					  EXPORT     KER_NTASK
                       EXPORT     KER_TASK_PSP
-					  EXPORT     KER_TASK_STACK
+					  EXPORT     KER_TASK_PRIO
 ;;===========================global variable declaration end=================================;; 
 
 
@@ -83,10 +84,11 @@ DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 
 
 ;;===========================global variable definition starting=============================;; 
+KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE+0x08          ;total stack space
 KER_TASK_ID           SPACE      4                                 ;current task id
-KER_TASK_NTASK        SPACE      4                                 ;total tasks
-KER_TASK_PSP          SPACE      12                                ;PSP for 10 tasks
-KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE               ;total stack space
+KER_NTASK             SPACE      4                                 ;total created tasks
+KER_TASK_PSP          SPACE      4*DEF_KER_MAX_NTASK               ;PSP for 10 tasks
+KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priority
 ;;=============================global variable definition end================================;; 
 
 
@@ -102,14 +104,14 @@ KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE               ;total stack 
 
 
 ;;=========================global function declaration starting==============================;; 
-					  EXPORT     Kernel_Task_Params_Init
-					  EXPORT     Kernel_Systick_Init
-				      EXPORT     Kernel_Idle_Task
+					  EXPORT     Kernel_Init
+					  EXPORT     Kernel_Start_Tasks
+					  EXPORT     Kernel_Task_Create
+					  EXPORT     Kernel_Idle_Task
 					  EXPORT     Kernel_Demo_Task0
 					  EXPORT     Kernel_Demo_Task1
 					  EXPORT     Kernel_Demo_Task2
-					  EXPORT     Kernel_Init
-					  EXPORT     Kernel_Task_Create
+						  
 					  EXPORT     SysTick_Handler
 ;;===========================global function declaration end=================================;; 
 
@@ -143,7 +145,7 @@ KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE               ;total stack 
 
 
 
-;;===========================macro for pushing r4-r11 starting===============================;; 
+;;===========================macro for pushing R4-R11 starting===============================;; 
                       MACRO
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MRS        R0,   PSP                         ;load PSP in R0
@@ -162,13 +164,13 @@ KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE               ;total stack 
 					  STR        R1,   [R0, #28]                   ;load data
 					  MSR        PSP,  R0                          ;update new top of stack
 					  MEND
-;;============================macro for pushing r4-r11 end==================================;; 
+;;============================macro for pushing R4-R11 end===================================;; 
 
 
 
 
 
-;;===========================macro for popping r4-r11 starting==============================;; 
+;;===========================macro for popping R4-R11 starting===============================;; 
 					  MACRO
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
 					  LDR        R4,   [R0, #0]                    ;load data
@@ -186,16 +188,23 @@ KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE               ;total stack 
 					  ADDS       R0,   #32                         ;add 32 bytes
 					  MSR        PSP,  R0                          ;update new top of stack
                       MEND
-;;==============================macro for popping r4-r11 end================================;; 
+;;==============================macro for popping R4-R11 end=================================;; 
 
 
 
 
+
+;;===================================idle task starting======================================;; 
 Kernel_Idle_Task
                       ;Idle task, does nothing
 					  B          .                                  ;forever loop
-                      
-					  
+;;=====================================idle task end=========================================;; 
+
+
+
+
+
+;;==================================demo task0 starting======================================;; 
 Kernel_Demo_Task0
                       ;toggle pin PA1
 					  LDR        R0,   =0x50000018                 ;load BSRR address
@@ -205,7 +214,13 @@ Kernel_Demo_Task0
 					  LDR        R1,   =0x00020000                 ;bit1 reset
 					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task0                 ;forever loop
-					  
+;;====================================demo task0 end=========================================;; 
+
+
+
+
+
+;;==================================demo task1 starting======================================;; 
 Kernel_Demo_Task1
 					  ;toggle pin PA2
 					  LDR        R0,   =0x50000018                 ;load BSRR address
@@ -215,7 +230,13 @@ Kernel_Demo_Task1
 					  LDR        R1,   =0x00040000                 ;bit1 reset
 					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task1                 ;forever loop
-					  
+;;====================================demo task1 end=========================================;; 
+
+
+
+
+
+;;==================================demo task2 starting======================================;; 
 Kernel_Demo_Task2
 					  ;toggle pin PA3
 					  LDR        R0,   =0x50000018                 ;load BSRR address
@@ -225,160 +246,93 @@ Kernel_Demo_Task2
 					  LDR        R1,   =0x00080000                 ;bit1 reset
 					  STR        R1,   [R0]                        ;store val
 					  B          Kernel_Demo_Task2                 ;forever loop
-                      
+;;====================================demo task2 end=========================================;; 
+
+
+
+
+
+;;==================================demo task3 starting======================================;; 
 Kernel_Init
                       PUSH       {LR}
 					  ;set first task_id
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R1,   =0x00000001                 ;start from 0
+					  LDR        R1,   =0x00000000                 ;start from 0
 					  STR        R1,   [R0]                        ;store task_id val
+					  ;set ntask
+                      LDR        R0,   =KER_NTASK                  ;load ntask addr
+					  LDR        R1,   =0x00000000                 ;start from 0
+					  STR        R1,   [R0]                        ;store ntask val
 					  POP        {PC}
-					  
+;;====================================demo task3 end=========================================;; 
+
+
+
+
+
+;;=================================task create starting======================================;; 
 Kernel_Task_Create
                       PUSH       {LR}
-					  ;task0 stack space init
-					  
+					  ;calculate stack top for this task
 					  LDR        R2,   =DEF_KER_STACK_SIZE         ;load each stack size
-					  LDR        R3,   =KER_TASK_ID                ;load current task id addr
-					  LDR        R3,   [R3]                        ;load current task id
-					  MULS       R2,   R3, R2                      ;multiply R2 & R3
-					  MOV        R12,  R2                          ;copy val
-					  LDR        R3,   =KER_TASK_STACK             ;PSP current top
-					  LDR        R2,   =DEF_KER_STACK_SPACE        ;load stack space
-					  ADDS       R3,   R3, R2                      ;add offset
-					  MOV        R2,   R12                         ;copy val
-					  SUBS       R3,   R3, R2                      ;stack_top-task_id*stack_size
-					  
-                      SUBS       R0,   #32                         ;make space for R4-R11
-                      SUBS       R0,   #32                         ;make space for hardware frame
-                      MOVS       R1,   #0
-					  ;task0 software stack
-					  STR        R1,   [R0, #0]                    ;R4
-					  STR        R1,   [R0, #4]                    ;R5
-					  STR        R1,   [R0, #8]                    ;R6
-					  STR        R1,   [R0, #12]                   ;R7
-					  STR        R1,   [R0, #16]                   ;R8
-					  STR        R1,   [R0, #20]                   ;R9
-					  STR        R1,   [R0, #24]                   ;R10
-					  STR        R1,   [R0, #28]                   ;R11
-					  ;task0 hardware stack
-                      STR        R1,   [R0, #32]                   ;R0
-                      STR        R1,   [R0, #36]                   ;R1
-                      STR        R1,   [R0, #40]                   ;R2
-                      STR        R1,   [R0, #44]                   ;R3
-                      STR        R1,   [R0, #48]                   ;R12
-                      STR        R1,   [R0, #52]                   ;LR
-                      LDR        R1,   =Kernel_Demo_Task0
-                      STR        R1,   [R0, #56]                   ;PC
-                      LDR        R1,   =0x01000000
-                      STR        R1,   [R0, #60]                   ;xPSR (Thumb)
-                      LDR        R1,   =KER_TASK_PSP
-                      STR        R0,   [R1]                        ;save PSP
+					  LDR        R3,   =KER_NTASK                  ;load ntask addr
+					  LDR        R3,   [R3]                        ;load ntask val
+					  ADDS       R3,   R3, #1                      ;task_id+1
+					  MULS       R2,   R3, R2                      ;(task_id+1)*size
+					  LDR        R3,   =KER_TASK_STACK             ;PSP start base
+					  ADDS       R2,   R2, R3                      ;add offset
+					  ;create space for stack frame
+                      SUBS       R2,   #32                         ;space for R4-R11
+                      SUBS       R2,   #32                         ;space for hardware frame
+                      MOVS       R3,   #0                          ;clear reg
+					  ;create software stack
+					  STR        R3,   [R2, #0]                    ;R4
+					  STR        R3,   [R2, #4]                    ;R5
+					  STR        R3,   [R2, #8]                    ;R6
+					  STR        R3,   [R2, #12]                   ;R7
+					  STR        R3,   [R2, #16]                   ;R8
+					  STR        R3,   [R2, #20]                   ;R9
+					  STR        R3,   [R2, #24]                   ;R10
+					  STR        R3,   [R2, #28]                   ;R11
+					  ;create hardware stack
+                      STR        R3,   [R2, #32]                   ;R0
+                      STR        R3,   [R2, #36]                   ;R1
+                      STR        R3,   [R2, #40]                   ;R2
+                      STR        R3,   [R2, #44]                   ;R3
+                      STR        R3,   [R2, #48]                   ;R12
+                      STR        R3,   [R2, #52]                   ;LR
+					  MOV        R3,   R0                          ;func addr
+                      STR        R3,   [R2, #56]                   ;PC
+                      LDR        R3,   =0x01000000                 ;thumb bit set
+                      STR        R3,   [R2, #60]                   ;xPSR (Thumb)
+					  ;calculate offset and store priority
+					  LDR        R0,   =KER_TASK_PRIO              ;priority base
+					  LDR        R3,   =KER_NTASK                  ;load ntask addr
+					  LDR        R3,   [R3]                        ;load ntask val
+					  LSLS       R3,   R3,  #2                     ;left shift to x4
+					  ADDS       R0,   R0, R3                      ;priority base+offset
+					  STR        R1,   [R0]                        ;save priority
+					  ;calculate offset and store PSP
+					  LDR        R0,   =KER_TASK_PSP               ;PSP base
+					  LDR        R3,   =KER_NTASK                  ;load ntask addr
+					  LDR        R3,   [R3]                        ;load ntask val
+					  LSLS       R3,   R3,  #2                     ;left shift to x4
+					  ADDS       R0,   R0, R3                      ;PSP base+offset
+					  STR        R2,   [R0]                        ;save PSP
+					  ;increment ntask
+					  LDR        R0,   =KER_NTASK                  ;load ntask addr
+					  LDR        R1,   [R0]                        ;load ntask val
+					  ADDS       R1,   R1, #1                      ;ntask+1
+					  STR        R1,   [R0]                        ;save PSP
 					  POP        {PC}
+;;====================================task create end========================================;; 
 
 
-Kernel_Task_Params_Init
-                      PUSH       {LR}
-                      ;set first task_id
-                      LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R1,   =0
-					  STR        R1,   [R0]                        ;store task_id val
-					  ;set number of tasks
-					  LDR        R0,   =KER_TASK_NTASK             ;load ntask addr
-					  LDR        R1,   =3
-					  STR        R1,   [R0]                        ;store nastk val
-					  
-					  ;task0 stack space init
-					  LDR        R0,   =0x20000F00                 ;PSP top
-                      SUBS       R0,   #32                         ;make space for R4-R11
-                      SUBS       R0,   #32                         ;make space for hardware frame
-                      MOVS       R1,   #0
-					  ;task0 software stack
-					  STR        R1,   [R0, #0]                    ;R4
-					  STR        R1,   [R0, #4]                    ;R5
-					  STR        R1,   [R0, #8]                    ;R6
-					  STR        R1,   [R0, #12]                   ;R7
-					  STR        R1,   [R0, #16]                   ;R8
-					  STR        R1,   [R0, #20]                   ;R9
-					  STR        R1,   [R0, #24]                   ;R10
-					  STR        R1,   [R0, #28]                   ;R11
-					  ;task0 hardware stack
-                      STR        R1,   [R0, #32]                   ;R0
-                      STR        R1,   [R0, #36]                   ;R1
-                      STR        R1,   [R0, #40]                   ;R2
-                      STR        R1,   [R0, #44]                   ;R3
-                      STR        R1,   [R0, #48]                   ;R12
-                      STR        R1,   [R0, #52]                   ;LR
-                      LDR        R1,   =Kernel_Demo_Task0
-                      STR        R1,   [R0, #56]                   ;PC
-                      LDR        R1,   =0x01000000
-                      STR        R1,   [R0, #60]                   ;xPSR (Thumb)
-                      LDR        R1,   =KER_TASK_PSP
-                      STR        R0,   [R1]                        ;save PSP
-					  
-					  
-					  ;task1 stack space init
-					  LDR        R0,   =0x20000E00                 ;PSP top
-                      SUBS       R0,   #32                         ;make space for R4-R11
-                      SUBS       R0,   #32                         ;make space for hardware frame
-                      MOVS       R1,   #0
-					  ;task1 software stack
-					  STR        R1,   [R0, #0]                    ;R4
-					  STR        R1,   [R0, #4]                    ;R5
-					  STR        R1,   [R0, #8]                    ;R6
-					  STR        R1,   [R0, #12]                   ;R7
-					  STR        R1,   [R0, #16]                   ;R8
-					  STR        R1,   [R0, #20]                   ;R9
-					  STR        R1,   [R0, #24]                   ;R10
-					  STR        R1,   [R0, #28]                   ;R11
-					  ;task1 hardware stack
-                      STR        R1,   [R0, #32]                   ;R0
-                      STR        R1,   [R0, #36]                   ;R1
-                      STR        R1,   [R0, #40]                   ;R2
-                      STR        R1,   [R0, #44]                   ;R3
-                      STR        R1,   [R0, #48]                   ;R12
-                      STR        R1,   [R0, #52]                   ;LR
-                      LDR        R1,   =Kernel_Demo_Task1
-                      STR        R1,   [R0, #56]                   ;PC
-                      LDR        R1,   =0x01000000
-                      STR        R1,   [R0, #60]                   ;xPSR (Thumb)
-                      LDR        R1,   =KER_TASK_PSP
-					  ADDS       R1,   #4
-                      STR        R0,   [R1]                        ;save PSP
-					  
-					  ;task2 stack space init
-					  LDR        R0,   =0x20000D00                 ;PSP top
-                      SUBS       R0,   #32                         ;make space for R4-R11
-                      SUBS       R0,   #32                         ;make space for hardware frame
-                      MOVS       R1,   #0
-					  ;task2 software stack
-					  STR        R1,   [R0, #0]                    ;R4
-					  STR        R1,   [R0, #4]                    ;R5
-					  STR        R1,   [R0, #8]                    ;R6
-					  STR        R1,   [R0, #12]                   ;R7
-					  STR        R1,   [R0, #16]                   ;R8
-					  STR        R1,   [R0, #20]                   ;R9
-					  STR        R1,   [R0, #24]                   ;R10
-					  STR        R1,   [R0, #28]                   ;R11
-					  ;task2 hardware stack
-                      STR        R1,   [R0, #32]                   ;R0
-                      STR        R1,   [R0, #36]                   ;R1
-                      STR        R1,   [R0, #40]                   ;R2
-                      STR        R1,   [R0, #44]                   ;R3
-                      STR        R1,   [R0, #48]                   ;R12
-                      STR        R1,   [R0, #52]                   ;LR
-                      LDR        R1,   =Kernel_Demo_Task2
-                      STR        R1,   [R0, #56]                   ;PC
-                      LDR        R1,   =0x01000000
-                      STR        R1,   [R0, #60]                   ;xPSR (Thumb)
-                      LDR        R1,   =KER_TASK_PSP
-					  ADDS       R1,   #8
-                      STR        R0,   [R1]                        ;save PSP
-					  
-					  POP        {PC}
 
 
-Kernel_Systick_Init
+
+;;=================================start tasks starting======================================;; 
+Kernel_Start_Tasks
                       LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
@@ -389,16 +343,26 @@ Kernel_Systick_Init
 					  MOVS       R1,   #7                          ;mask bit0, bit1 & bit2
 					  STR        R1,   [R0]                        ;set val to stk_ctrl
 					  
+					  ;calculate stack top for this task
+					  LDR        R0,   =DEF_KER_STACK_SIZE         ;load each stack size
+					  LDR        R1,   =KER_TASK_STACK             ;PSP start base
+					  ADDS       R0,   R0, R1                      ;add offset
+					  
 					  ;Setup PSP for main
-                      LDR        R0,   =0x20000F00                 ;address of main stack
                       MSR        PSP,  R0                          ;set PSP
                       MRS        R1,   CONTROL
-					  LDR        R2,   =2
-                      ORRS       R1,   R1, R2                      ;CONTROL.SPSEL = 1 ? use PSP in thread mode
+					  LDR        R2,   =0x02
+                      ORRS       R1,   R1, R2                      ;CONTROL.SPSEL = 1
                       MSR        CONTROL, R1                       ;switch to PSP
                       ISB                                          ;instruction barrier
-					  B          Kernel_Demo_Task0                 ;call a task
-					  
+					  B          Kernel_Idle_Task                  ;call a task
+;;====================================start tasks end========================================;; 
+
+
+
+
+
+;;=================================systick isr starting======================================;; 
 SysTick_Handler
                       ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
 					  ;Software pushed (address wise, high->low) R11-R4
@@ -422,7 +386,7 @@ SysTick_Handler
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id val
 					  ADDS       R1,   R1, #1                      ;add 1
-					  LDR        R2,   =KER_TASK_NTASK             ;load ntask addr
+					  LDR        R2,   =KER_NTASK                  ;load ntask addr
 					  LDR        R2,   [R2]                        ;load ntask val
 					  CMP        R1,   R2                          ;compare R1 with R2
 					  BLT        SKIP_WRAP_TASK_ID                 ;task_id<ntask
@@ -447,18 +411,25 @@ SKIP_WRAP_TASK_ID
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
-					  
-					  
+;;====================================systick isr end========================================;; 
+
+
+
+
+
+;;=============================pending service isr starting==================================;; 
 PendSV_Handler
                       CPSID      I                                 ;disable interrupts
                       ;do some task here
                       CPSIE      I                                 ;enable interrupt
                       BX LR                                        ;return from exception
+;;================================pending service isr end====================================;; 
+
 					  
 					  
 					  
 					  
-					  END
+					  END                                          ;end of file
 					  
 					  
 
