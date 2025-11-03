@@ -21,6 +21,8 @@ void    Kernel_Demo_Task0(void);
 void    Kernel_Demo_Task1(void);
 void    Kernel_Demo_Task2(void);
 
+void    Kernel_Task_Sleep(uint32_t val);
+
 #endif
 
 

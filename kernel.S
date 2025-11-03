@@ -89,6 +89,8 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 					  EXPORT     KER_NTASK
                       EXPORT     KER_TASK_PSP
 					  EXPORT     KER_TASK_PRIO
+					  EXPORT     KER_TASK_HI_PRIO
+					  EXPORT     KER_TASK_PRIO_TID
 					  EXPORT     KER_TASK_SLEEP
 					  EXPORT     KER_TASK_STS
 					  EXPORT     KER_TEMP0
@@ -105,6 +107,8 @@ KER_TASK_ID           SPACE      4                                 ;current task
 KER_NTASK             SPACE      4                                 ;total created tasks
 KER_TASK_PSP          SPACE      4*DEF_KER_MAX_NTASK               ;PSP for 10 tasks
 KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priority
+KER_TASK_HI_PRIO      SPACE      4                                 ;highest priority
+KER_TASK_PRIO_TID     SPACE      4                                 ;highest priority task_id
 KER_TASK_SLEEP        SPACE      4*DEF_KER_MAX_NTASK               ;task sleep duration
 KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 KER_TEMP0             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
@@ -131,7 +135,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  EXPORT     Kernel_Demo_Task0
 					  EXPORT     Kernel_Demo_Task1
 					  EXPORT     Kernel_Demo_Task2
-						  
+					  EXPORT     Kernel_Task_Sleep
 					  EXPORT     SysTick_Handler
 ;;===========================global function declaration end=================================;; 
 
@@ -214,25 +218,109 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 
+;;================================macro for offset starting==================================;; 
+					  MACRO
+					  MACRO_OFFSET_CALC                            ;offset calculation
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R0,   [R0]                        ;load task_id val
+					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
+                      MEND
+;;===================================macro for offset end====================================;; 
+
+
+
+
+;;==============================macro for saving psp starting================================;; 
+					  MACRO
+					  MACRO_SAVE_PSP                               ;save psp
+					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
+					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
+					  ADD        R0,   R0,  R1                     ;calc offset from psp base
+					  MRS        R1,   PSP                         ;load PSP in R1
+					  STR        R1,   [R0]                        ;set val to reg
+                      MEND
+;;=================================macro for saving psp end==================================;; 
+
+
+
+
+
+;;==============================macro for loading psp starting===============================;; 
+					  MACRO
+					  MACRO_LOAD_PSP                               ;load psp
+					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
+					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
+					  ADD        R0,   R0,  R1                     ;calc offset from psp base
+					  LDR        R0,   [R0]                        ;load task PSP
+                      MEND
+;;=================================macro for loading psp end=================================;; 
+
+
+
+
+
 ;;=======================macro for sleep time management starting============================;; 
 					  MACRO
 					  MACRO_KER_SLP_TIME_MGNT                      ;sleep time management
-					  LDR        R4,   [R0, #0]                    ;load data
-					  LDR        R5,   [R0, #4]                    ;load data
-					  LDR        R6,   [R0, #8]                    ;load data
-					  LDR        R7,   [R0, #12]                   ;load data
-					  LDR        R1,   [R0, #16]                   ;load data
-					  MOV        R8,   R1                          ;copy
-					  LDR        R1,   [R0, #20]                   ;load data
-					  MOV        R9,   R1                          ;copy
-					  LDR        R1,   [R0, #24]                   ;load data
-					  MOV        R10,  R1                          ;copy
-					  LDR        R1,   [R0, #28]                   ;load data
-					  MOV        R11,  R1                          ;copy
-					  ADDS       R0,   #32                         ;add 32 bytes
-					  MSR        PSP,  R0                          ;update new top of stack
+					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
+					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
+					  ADDS       R1,   R1, R0                      ;sleep base+offset
+					  LDR        R1,   [R1]                        ;load sleep duration
+					  CMP        R1,   #0                          ;compare with 0
+					  BEQ        %FT1                              ;jmp to label
+					  SUBS       R1,   R1, #1                      ;decrease by 1
+					  BEQ        %FT1                              ;jmp to label
+					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
+					  B          %FT2                              ;jmp to label
+%FT1
+					  LDR        R1,   =TASK_READY                 ;set status ready
+%FT2                  
+					  LSLS       R0,   R0, #2                      ;left shift to x4
+					  LDR        R2,   =KER_TASK_STS               ;load status base addr
+					  ADDS       R0,   R0, R2                      ;base+offset
+					  STR        R1,   [R0]                        ;store status
                       MEND
 ;;=========================macro for sleep time management end===============================;; 
+
+
+
+
+
+;;============================macro for scheduler starting===================================;; 
+					  MACRO
+					  MACRO_KER_RUN_SCHEDULER                      ;scheduler
+					  
+					  
+					  LDR        R0,   =0xFF                       ;set val
+					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
+					  STR        R0,   [R1]                        ;store lowest priority
+					  LDR        R0,   =0                          ;set val
+					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
+					  STR        R0,   [R1]                        ;store task_id
+					  
+%BT1
+					  MACRO_KER_SLP_TIME_MGNT
+					  
+					  ;calculate offset, load status
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R0,   [R0]                        ;load task_id val
+					  LSLS       R0,   R0, #2                      ;left shift to x4
+					  LDR        R1,   =KER_TASK_STS               ;load status base addr
+					  ADDS       R0,   R0, R1                      ;status base+offset
+					  LDR        R0,   [R0]                        ;load status
+					  
+					  ;check if ready
+					  LDR        R1,   =TASK_READY                 ;load ready status
+					  CMP        R0,   R1                          ;compare
+					  BNE        %FT1                              ;jmp to label (not ready)
+					  
+					  ;process if task ready
+					  LDR        R0,   =KER_TASK_HI_PRIO           ;load hi-prio addr
+					  LDR        R0,   [R0]                        ;load hi-prio val
+%FT1
+                      
+                      MEND
+;;================================macro for scheduler end====================================;; 
 
 
 
@@ -241,6 +329,8 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 ;;===================================idle task starting======================================;; 
 Kernel_Idle_Task
                       ;Idle task, does nothing
+					  LDR        R0,    =100                        ;set 100ms sleep
+					  BL         Kernel_Task_Sleep
 					  B          .                                  ;forever loop
 ;;=====================================idle task end=========================================;; 
 
@@ -307,6 +397,11 @@ Kernel_Init
                       LDR        R0,   =KER_NTASK                  ;load ntask addr
 					  LDR        R1,   =0x00000000                 ;start from 0
 					  STR        R1,   [R0]                        ;store ntask val
+					  
+					  LDR        R0,   =Kernel_Idle_Task           ;load idle task addr
+					  LDR        R1,   =0xFF                       ;lowest priority
+					  BL         Kernel_Task_Create
+					  
 					  POP        {PC}
 ;;====================================demo task3 end=========================================;; 
 
@@ -357,7 +452,7 @@ Kernel_Task_Create
 					  ;calculate offset(R1 arg, R2 stack top)
 					  LDR        R0,   =KER_NTASK                  ;load ntask addr
 					  LDR        R0,   [R0]                        ;load ntask val
-					  LSLS       R0,   R0,  #2                     ;left shift to x4
+					  LSLS       R0,   R0, #2                      ;left shift to x4
 					  
 					  ;store PSP (R0 offset, R1 arg, R2 stack top)
 					  LDR        R3,   =KER_TASK_PSP               ;PSP base
@@ -369,17 +464,25 @@ Kernel_Task_Create
 					  ADDS       R2,   R2, R0                      ;priority base+offset
 					  STR        R1,   [R2]                        ;save priority
 					  
+					  ;store sleep (R0 offset)
+					  LDR        R1,   =KER_TASK_SLEEP             ;sleep base
+					  LDR        R2,   =0                          ;set sleep duration 0
+					  ADDS       R1,   R1, R0                      ;sleep base+offset
+					  STR        R2,   [R1]                        ;save sleep duration
+					  
 					  ;store status (R0 offset)
 					  LDR        R1,   =KER_TASK_STS               ;priority base
+					  LDR        R2,   =TASK_READY                 ;set status ready
 					  ADDS       R1,   R1, R0                      ;priority base+offset
-					  STR        R1,   [R1]                        ;save priority
+					  STR        R2,   [R1]                        ;save priority
 					  
-					  ;increment ntask
+					  ;increment ntask (R0 offset)
 					  LDR        R0,   =KER_NTASK                  ;load ntask addr
 					  LDR        R1,   [R0]                        ;load ntask val
 					  ADDS       R1,   R1, #1                      ;ntask+1
 					  STR        R1,   [R0]                        ;save PSP
-					  POP        {PC}
+					  
+					  POP        {PC}                              ;return
 ;;====================================task create end========================================;; 
 
 
@@ -388,6 +491,7 @@ Kernel_Task_Create
 
 ;;=================================start tasks starting======================================;; 
 Kernel_Start_Tasks
+                      ;configure SysTick timer
                       LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
@@ -424,18 +528,9 @@ SysTick_Handler
                       CPSID      I                                 ;disable interrupts
 					  
 					  
-					  MACRO_GPIO_SET
-					  
+					  MACRO_GPIO_SET                               ;debug pin set
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
-					  
-					  ;save PSP to task block area
-					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R0,   [R0]                        ;load task_id val
-					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
-					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
-					  ADD        R0,   R0,  R1                     ;calc offset from psp base
-					  MRS        R1,   PSP                         ;load PSP in R1
-					  STR        R1,   [R0]                        ;set val to reg
+					  MACRO_SAVE_PSP                               ;save psp
 					  
 					  ;go to next task
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
@@ -451,18 +546,9 @@ SKIP_WRAP_TASK_ID
 					  
 					  
 					  
-					  ;load PSP according to the new task_id
-					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R0,   [R0]                        ;load task_id val
-					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
-					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
-					  ADD        R0,   R0,  R1                     ;calc offset from psp base
-					  LDR        R0,   [R0]                        ;load task PSP
-					  
-					  
+					  MACRO_LOAD_PSP                               ;load psp
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
-					  
-					  MACRO_GPIO_CLEAR
+					  MACRO_GPIO_CLEAR                             ;debug pin clear
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
@@ -477,11 +563,38 @@ PendSV_Handler
                       CPSID      I                                 ;disable interrupts
                       ;do some task here
                       CPSIE      I                                 ;enable interrupt
-                      BX LR                                        ;return from exception
+                      BX         LR                                ;return from exception
 ;;================================pending service isr end====================================;; 
 
+
+
+
 					  
+;;==============================kernel task sleep starting===================================;; 
+Kernel_Task_Sleep
+                      PUSH       {LR}                              ;store return addr
 					  
+					  ;find offset (R0 arg)
+                      LDR        R1,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   [R1]                        ;load task_id val
+					  LSLS       R1,   R1,  #2                     ;left shift 2 times to x4
+					  
+					  ;set sleep val (R0 arg, R1 offset)
+					  LDR        R2,   =KER_TASK_SLEEP             ;load sleep base addr
+					  ADDS       R2,   R2, R1                      ;add offset
+					  STR        R0,   [R2]                        ;store sleep duration
+					  
+					  ;set status (R1 offset)
+					  LDR        R2,   =KER_TASK_STS               ;load status base addr
+					  ADDS       R2,   R2, R1                      ;add offset
+					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
+					  STR        R1,   [R2]                        ;store status
+					  
+					  POP        {PC}                              ;return
+;;=================================kernel task sleep end=====================================;; 
+
+
+
 					  
 					  
 					  END                                          ;end of file
