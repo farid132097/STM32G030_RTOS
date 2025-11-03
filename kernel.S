@@ -63,6 +63,18 @@ DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 
 
 
+;;================================define system macro starting===============================;; 
+TASK_BLOCKED          EQU        0x00                              ;blocked state                    
+TASK_READY            EQU        0x01                              ;ready state                     
+TASK_EXECUTING        EQU        0x02                              ;executing state                       
+TASK_SUSPENDED        EQU        0x03                              ;suspended state                    
+TASK_CONS_LAT         EQU        0x04                              ;constant latency state 
+;;===================================define system macro end=================================;; 
+
+
+
+
+
 ;;==============================RAM area definition starting=================================;; 
 					  AREA       |.data|, DATA, READWRITE, ALIGN=2
 ;;================================RAM area definition end====================================;; 
@@ -77,6 +89,10 @@ DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 					  EXPORT     KER_NTASK
                       EXPORT     KER_TASK_PSP
 					  EXPORT     KER_TASK_PRIO
+					  EXPORT     KER_TASK_SLEEP
+					  EXPORT     KER_TASK_STS
+					  EXPORT     KER_TEMP0
+					  EXPORT     KER_TEMP1
 ;;===========================global variable declaration end=================================;; 
 
 
@@ -89,6 +105,10 @@ KER_TASK_ID           SPACE      4                                 ;current task
 KER_NTASK             SPACE      4                                 ;total created tasks
 KER_TASK_PSP          SPACE      4*DEF_KER_MAX_NTASK               ;PSP for 10 tasks
 KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priority
+KER_TASK_SLEEP        SPACE      4*DEF_KER_MAX_NTASK               ;task sleep duration
+KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
+KER_TEMP0             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
+KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
 ;;=============================global variable definition end================================;; 
 
 
@@ -194,6 +214,30 @@ KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priorit
 
 
 
+;;=======================macro for sleep time management starting============================;; 
+					  MACRO
+					  MACRO_KER_SLP_TIME_MGNT                      ;sleep time management
+					  LDR        R4,   [R0, #0]                    ;load data
+					  LDR        R5,   [R0, #4]                    ;load data
+					  LDR        R6,   [R0, #8]                    ;load data
+					  LDR        R7,   [R0, #12]                   ;load data
+					  LDR        R1,   [R0, #16]                   ;load data
+					  MOV        R8,   R1                          ;copy
+					  LDR        R1,   [R0, #20]                   ;load data
+					  MOV        R9,   R1                          ;copy
+					  LDR        R1,   [R0, #24]                   ;load data
+					  MOV        R10,  R1                          ;copy
+					  LDR        R1,   [R0, #28]                   ;load data
+					  MOV        R11,  R1                          ;copy
+					  ADDS       R0,   #32                         ;add 32 bytes
+					  MSR        PSP,  R0                          ;update new top of stack
+                      MEND
+;;=========================macro for sleep time management end===============================;; 
+
+
+
+
+
 ;;===================================idle task starting======================================;; 
 Kernel_Idle_Task
                       ;Idle task, does nothing
@@ -273,7 +317,8 @@ Kernel_Init
 ;;=================================task create starting======================================;; 
 Kernel_Task_Create
                       PUSH       {LR}
-					  ;calculate stack top for this task
+					  
+					  ;calculate stack top for this task (R0:R1 are used by arguments)
 					  LDR        R2,   =DEF_KER_STACK_SIZE         ;load each stack size
 					  LDR        R3,   =KER_NTASK                  ;load ntask addr
 					  LDR        R3,   [R3]                        ;load ntask val
@@ -281,11 +326,13 @@ Kernel_Task_Create
 					  MULS       R2,   R3, R2                      ;(task_id+1)*size
 					  LDR        R3,   =KER_TASK_STACK             ;PSP start base
 					  ADDS       R2,   R2, R3                      ;add offset
-					  ;create space for stack frame
+					  
+					  ;create space for stack frame (R0:R1 arg, R2 stack top)
                       SUBS       R2,   #32                         ;space for R4-R11
                       SUBS       R2,   #32                         ;space for hardware frame
                       MOVS       R3,   #0                          ;clear reg
-					  ;create software stack
+					  
+					  ;create software stack (R0:R1 arg, R2 stack top, R3 for clearing)
 					  STR        R3,   [R2, #0]                    ;R4
 					  STR        R3,   [R2, #4]                    ;R5
 					  STR        R3,   [R2, #8]                    ;R6
@@ -294,7 +341,8 @@ Kernel_Task_Create
 					  STR        R3,   [R2, #20]                   ;R9
 					  STR        R3,   [R2, #24]                   ;R10
 					  STR        R3,   [R2, #28]                   ;R11
-					  ;create hardware stack
+					  
+					  ;create hardware stack (R0:R1 arg, R2 stack top, R3 for clearing)
                       STR        R3,   [R2, #32]                   ;R0
                       STR        R3,   [R2, #36]                   ;R1
                       STR        R3,   [R2, #40]                   ;R2
@@ -305,20 +353,27 @@ Kernel_Task_Create
                       STR        R3,   [R2, #56]                   ;PC
                       LDR        R3,   =0x01000000                 ;thumb bit set
                       STR        R3,   [R2, #60]                   ;xPSR (Thumb)
-					  ;calculate offset and store priority
-					  LDR        R0,   =KER_TASK_PRIO              ;priority base
-					  LDR        R3,   =KER_NTASK                  ;load ntask addr
-					  LDR        R3,   [R3]                        ;load ntask val
-					  LSLS       R3,   R3,  #2                     ;left shift to x4
-					  ADDS       R0,   R0, R3                      ;priority base+offset
-					  STR        R1,   [R0]                        ;save priority
-					  ;calculate offset and store PSP
-					  LDR        R0,   =KER_TASK_PSP               ;PSP base
-					  LDR        R3,   =KER_NTASK                  ;load ntask addr
-					  LDR        R3,   [R3]                        ;load ntask val
-					  LSLS       R3,   R3,  #2                     ;left shift to x4
-					  ADDS       R0,   R0, R3                      ;PSP base+offset
-					  STR        R2,   [R0]                        ;save PSP
+					  
+					  ;calculate offset(R1 arg, R2 stack top)
+					  LDR        R0,   =KER_NTASK                  ;load ntask addr
+					  LDR        R0,   [R0]                        ;load ntask val
+					  LSLS       R0,   R0,  #2                     ;left shift to x4
+					  
+					  ;store PSP (R0 offset, R1 arg, R2 stack top)
+					  LDR        R3,   =KER_TASK_PSP               ;PSP base
+					  ADDS       R3,   R3, R0                      ;PSP base+offset
+					  STR        R2,   [R3]                        ;save PSP
+					  
+					  ;store priority (R0 offset, R1 arg)
+					  LDR        R2,   =KER_TASK_PRIO              ;priority base
+					  ADDS       R2,   R2, R0                      ;priority base+offset
+					  STR        R1,   [R2]                        ;save priority
+					  
+					  ;store status (R0 offset)
+					  LDR        R1,   =KER_TASK_STS               ;priority base
+					  ADDS       R1,   R1, R0                      ;priority base+offset
+					  STR        R1,   [R1]                        ;save priority
+					  
 					  ;increment ntask
 					  LDR        R0,   =KER_NTASK                  ;load ntask addr
 					  LDR        R1,   [R0]                        ;load ntask val
