@@ -265,20 +265,21 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
-					  LDR        R1,   [R1]                        ;load sleep duration
-					  CMP        R1,   #0                          ;compare with 0
+					  LDR        R2,   [R1]                        ;load sleep duration
+					  CMP        R2,   #0                          ;compare with 0
 					  BEQ        %FT1                              ;jmp to label
-					  SUBS       R1,   R1, #1                      ;decrease by 1
+					  SUBS       R2,   R2, #1                      ;decrease by 1
+					  STR        R2,   [R1]                        ;store new val
+					  CMP        R2,   #0                          ;compare with 0
 					  BEQ        %FT1                              ;jmp to label
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  B          %FT2                              ;jmp to label
 %FT1
 					  LDR        R1,   =TASK_READY                 ;set status ready
 %FT2                  
-					  LSLS       R0,   R0, #2                      ;left shift to x4
 					  LDR        R2,   =KER_TASK_STS               ;load status base addr
-					  ADDS       R0,   R0, R2                      ;base+offset
-					  STR        R1,   [R0]                        ;store status
+					  ADDS       R2,   R2, R0                      ;base+offset
+					  STR        R1,   [R2]                        ;store status
                       MEND
 ;;=========================macro for sleep time management end===============================;; 
 
@@ -301,24 +302,40 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 %BT1
 					  MACRO_KER_SLP_TIME_MGNT
 					  
-					  ;calculate offset, load status
-					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R0,   [R0]                        ;load task_id val
-					  LSLS       R0,   R0, #2                      ;left shift to x4
+					  ;calculate offset R0, load status 
 					  LDR        R1,   =KER_TASK_STS               ;load status base addr
-					  ADDS       R0,   R0, R1                      ;status base+offset
-					  LDR        R0,   [R0]                        ;load status
+					  ADDS       R1,   R1, R0                      ;status base+offset
+					  LDR        R1,   [R1]                        ;load status
 					  
 					  ;check if ready
-					  LDR        R1,   =TASK_READY                 ;load ready status
-					  CMP        R0,   R1                          ;compare
+					  LDR        R2,   =TASK_READY                 ;load ready status
+					  CMP        R1,   R2                          ;compare
 					  BNE        %FT1                              ;jmp to label (not ready)
 					  
 					  ;process if task ready
-					  LDR        R0,   =KER_TASK_HI_PRIO           ;load hi-prio addr
-					  LDR        R0,   [R0]                        ;load hi-prio val
+					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
+					  LDR        R2,   [R1]                        ;load hi-prio val
+					  LDR        R3,   =KER_TASK_PRIO              ;load prio addr
+					  ADDS       R3,   R3, R0                      ;prio base+offset
+					  LDR        R3,   [R3]                        ;load prio val
+					  
+					  ;if current priority >= highest priority
+					  CMP        R3,   R2                          ;compare 
+					  BSH        %FT1                              ;jmp to label (no hi prio found)
+					  
+					  ;if new high prio found
+					  STR        R3,   [R1]                        ;store new hi-prio
 %FT1
-                      
+                      LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R0,   [R0]                        ;load task_id val
+					  ADDS       R0,   R0, #1                      ;increment
+					  LDR        R1,   =KER_NTASK                  ;load ntask addr
+					  LDR        R1,   [R1]                        ;load ntask val
+                      CMP        R0,   R1                          ;compare
+					  BSH        %FT2                              ;task_id>=ntask
+					  
+					  
+%FT2
                       MEND
 ;;================================macro for scheduler end====================================;; 
 
