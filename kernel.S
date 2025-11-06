@@ -261,22 +261,22 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 ;;=======================macro for sleep time management starting============================;; 
 					  MACRO                                        ;macro start
-$ML_SLP_TM		      MACRO_KER_SLP_TIME_MGNT                      ;macro name, local label
+        		      MACRO_KER_SLP_TIME_MGNT $ML                  ;macro name, local label
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
 					  LDR        R2,   [R1]                        ;load sleep duration
 					  CMP        R2,   #0                          ;compare with 0
-					  BEQ        $ML_SLP_TM.TREADY                 ;jmp to label
+					  BEQ        $ML.TREADY                        ;jmp to label
 					  SUBS       R2,   R2, #1                      ;decrease by 1
 					  STR        R2,   [R1]                        ;store new val
 					  CMP        R2,   #0                          ;compare with 0
-					  BEQ        $ML_SLP_TM.TREADY                 ;jmp to label
+					  BEQ        $ML.TREADY                        ;jmp to label
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
-					  B          $ML_SLP_TM.UPDSTS                 ;jmp to label
-$ML_SLP_TM.TREADY                                                  ;label->task ready
+					  B          $ML.UPDSTS                        ;jmp to label
+$ML.TREADY                                                         ;label->task ready
 					  LDR        R1,   =TASK_READY                 ;set status ready
-$ML_SLP_TM.UPDSTS                                                  ;label->update status
+$ML.UPDSTS                                                         ;label->update status
 					  LDR        R2,   =KER_TASK_STS               ;load status base addr
 					  ADDS       R2,   R2, R0                      ;base+offset
 					  STR        R1,   [R2]                        ;store status
@@ -289,7 +289,7 @@ $ML_SLP_TM.UPDSTS                                                  ;label->updat
 
 ;;============================macro for scheduler starting===================================;; 
 					  MACRO                                        ;macro start
-$ML_SCH_RUN  		  MACRO_KER_RUN_SCHEDULER                      ;macro name, local label
+            		  MACRO_KER_RUN_SCHEDULER $ML1, $ML2           ;macro name, local label
 					  
 					  ;init values before loop entry
 					  LDR        R0,   =0xFF                       ;set val
@@ -302,8 +302,8 @@ $ML_SCH_RUN  		  MACRO_KER_RUN_SCHEDULER                      ;macro name, local
 					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  STR        R0,   [R1]                        ;store task_id
 					  
-$ML_SCH_RUN.LP_STRT                                                ;label-> loop start
-					  MACRO_KER_SLP_TIME_MGNT                      ;time mangement
+$ML2.LP_STRT                                                       ;label-> loop start
+					  MACRO_KER_SLP_TIME_MGNT $ML1                 ;time mangement
 					  
 					  ;calculate offset R0, load status 
 					  LDR        R1,   =KER_TASK_STS               ;load status base addr
@@ -313,7 +313,7 @@ $ML_SCH_RUN.LP_STRT                                                ;label-> loop
 					  ;check if task ready
 					  LDR        R2,   =TASK_READY                 ;load ready status
 					  CMP        R1,   R2                          ;compare
-					  BNE        $ML_SCH_RUN.BL_OR_LP              ;jmp to label (blocked)
+					  BNE        $ML2.BL_OR_LP                      ;jmp to label (blocked)
 					  
 					  ;task is ready
 					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
@@ -324,7 +324,7 @@ $ML_SCH_RUN.LP_STRT                                                ;label-> loop
 					  
 					  ;check current priority >= highest priority (lower val is higher priority)
 					  CMP        R3,   R2                          ;compare 
-					  BHS        $ML_SCH_RUN.BL_OR_LP              ;jmp to label (low prio)
+					  BHS        $ML2.BL_OR_LP                     ;jmp to label (low prio)
 					  
 					  ;new high prio found
 					  STR        R3,   [R1]                        ;store new hi-prio
@@ -332,19 +332,18 @@ $ML_SCH_RUN.LP_STRT                                                ;label-> loop
 					  LDR        R0,   [R0]                        ;load task_id val
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio task_id addr
 					  STR        R0,   [R1]                        ;store prio task_id
-$ML_SCH_RUN.BL_OR_LP                                               ;label->blocked or low priority
+$ML2.BL_OR_LP                                                       ;label->blocked or low priority
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id val
 					  ADDS       R1,   R1, #1                      ;increment
 					  LDR        R2,   =KER_NTASK                  ;load ntask addr
 					  LDR        R2,   [R2]                        ;load ntask val
                       CMP        R1,   R2                          ;compare
-					  BHS        $ML_SCH_RUN.LP_END                ;task_id>=ntask
+					  BHS        $ML2.LP_END                       ;task_id>=ntask
 					  STR        R1,   [R0]                        ;store new task_id
-					  B          $ML_SCH_RUN.LP_STRT               ;loop start
+					  B          $ML2.LP_STRT                      ;loop start
 					  
-					  
-$ML_SCH_RUN.LP_END                                                 ;loop complete
+$ML2.LP_END                                                        ;loop complete
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
 					  LDR        R1,   [R1]                        ;load prio tid val
@@ -566,12 +565,7 @@ SysTick_Handler
 					  MACRO_GPIO_SET                               ;debug pin set
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MACRO_SAVE_PSP                               ;save psp
-					  MACRO_KER_RUN_SCHEDULER                      ;run scheduler
-					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
-					  LDR        R1,   [R1]                        ;load prio tid val
-					  STR        R1,   [R0]                        ;store new prio tid
-					  
+					  MACRO_KER_RUN_SCHEDULER ISRLBL1, ISRLBL2     ;run scheduler, local label
 					  MACRO_LOAD_PSP                               ;load psp
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
 					  MACRO_GPIO_CLEAR                             ;debug pin clear
@@ -599,7 +593,7 @@ PendSV_Handler
 ;;==============================kernel task sleep starting===================================;; 
 Kernel_Task_Sleep
                       PUSH       {LR}                              ;store return addr
-					  
+					  CPSID      I                                 ;disable interrupts
 					  ;find offset (R0 arg)
                       LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R1]                        ;load task_id val
@@ -615,7 +609,12 @@ Kernel_Task_Sleep
 					  ADDS       R2,   R2, R1                      ;add offset
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  STR        R1,   [R2]                        ;store status
-					  
+					  ;MACRO_PUSH_R4_R11                            ;push R4-R11 manually
+					  ;MACRO_SAVE_PSP                               ;save psp
+					  ;MACRO_KER_RUN_SCHEDULER MLLBL1, MLLBL2       ;run scheduler, local label
+					  ;MACRO_LOAD_PSP                               ;load psp
+					  ;MACRO_POP_R11_R4                             ;pop R11-R4 manually
+					  CPSIE      I                                 ;enable interrupt
 					  POP        {PC}                              ;return
 ;;=================================kernel task sleep end=====================================;; 
 
