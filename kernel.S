@@ -169,6 +169,31 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 
+;;======================macro for pushing R0-R3,R12,LR,PC,xPSR starting======================;; 
+                      MACRO                                        ;macro start
+					  MACRO_PUSH_R0_R3_R12_LR_PC_xPSR              ;macro name
+					  MRS        R0,   PSP                         ;load PSP in R0
+					  SUBS       R0,   #32                         ;subtract 32 bytes
+					  STR        R4,   [R0, #0]                    ;load data
+					  STR        R5,   [R0, #4]                    ;load data
+					  STR        R6,   [R0, #8]                    ;load data
+					  STR        R7,   [R0, #12]                   ;load data
+					  MOV        R1,   R8                          ;copy
+					  STR        R1,   [R0, #16]                   ;load data
+					  MOV        R1,   R9                          ;copy
+					  STR        R1,   [R0, #20]                   ;load data
+					  MOV        R1,   R10                         ;copy
+					  STR        R1,   [R0, #24]                   ;load data
+					  MOV        R1,   R11                         ;copy
+					  STR        R1,   [R0, #28]                   ;load data
+					  MSR        PSP,  R0                          ;update new top of stack
+					  MEND                                         ;macro end
+;;=========================macro for pushing R0-R3,R12,LR,PC,xPSR end========================;; 
+
+
+
+
+
 ;;===========================macro for pushing R4-R11 starting===============================;; 
                       MACRO                                        ;macro start
 					  MACRO_PUSH_R4_R11                            ;macro name
@@ -565,7 +590,7 @@ SysTick_Handler
 					  MACRO_GPIO_SET                               ;debug pin set
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MACRO_SAVE_PSP                               ;save psp
-					  MACRO_KER_RUN_SCHEDULER ISRLBL1, ISRLBL2     ;run scheduler, local label
+					  MACRO_KER_RUN_SCHEDULER ISRLBL0, ISRLBL1     ;run scheduler, local label
 					  MACRO_LOAD_PSP                               ;load psp
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
 					  MACRO_GPIO_CLEAR                             ;debug pin clear
@@ -580,20 +605,34 @@ SysTick_Handler
 
 ;;=============================pending service isr starting==================================;; 
 PendSV_Handler
+                      ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
+					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
-                      ;do some task here
-                      CPSIE      I                                 ;enable interrupt
-                      BX         LR                                ;return from exception
+					  
+					  MACRO_GPIO_SET                               ;debug pin set
+					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
+					  MACRO_SAVE_PSP                               ;save psp
+					  MACRO_KER_RUN_SCHEDULER ISRLBL2, ISRLBL3     ;run scheduler, local label
+					  MACRO_LOAD_PSP                               ;load psp
+					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
+					  MACRO_GPIO_CLEAR                             ;debug pin clear
+					  
+					  CPSIE      I                                 ;enable interrupt
+					  BX         LR                                ;return from interrupt
 ;;================================pending service isr end====================================;; 
 
 
 
 
-					  
+
 ;;==============================kernel task sleep starting===================================;; 
 Kernel_Task_Sleep
                       PUSH       {LR}                              ;store return addr
 					  CPSID      I                                 ;disable interrupts
+					  
+					  ;MACRO_PUSH_R4_R11                            ;push R4-R11 manually
+					  ;MACRO_SAVE_PSP                               ;save psp
+					  
 					  ;find offset (R0 arg)
                       LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R1]                        ;load task_id val
@@ -609,8 +648,8 @@ Kernel_Task_Sleep
 					  ADDS       R2,   R2, R1                      ;add offset
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  STR        R1,   [R2]                        ;store status
-					  ;MACRO_PUSH_R4_R11                            ;push R4-R11 manually
-					  ;MACRO_SAVE_PSP                               ;save psp
+					  
+					  
 					  ;MACRO_KER_RUN_SCHEDULER MLLBL1, MLLBL2       ;run scheduler, local label
 					  ;MACRO_LOAD_PSP                               ;load psp
 					  ;MACRO_POP_R11_R4                             ;pop R11-R4 manually
