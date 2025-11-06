@@ -144,12 +144,12 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;===========================macro for gpio set starting=====================================;; 
-                      MACRO 
-					  MACRO_GPIO_SET        
+                      MACRO                                        ;macro start
+					  MACRO_GPIO_SET                               ;macro name
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00000001                 ;bit0 set
 					  STR        R1,   [R0]                        ;store val
-                      MEND
+                      MEND                                         ;macro end
 ;;=============================macro for gpio set end========================================;; 
 
 
@@ -157,12 +157,12 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;===========================macro for gpio clear starting===================================;; 
-					  MACRO
-                      MACRO_GPIO_CLEAR
+					  MACRO                                        ;macro start
+                      MACRO_GPIO_CLEAR                             ;macro name
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00010000                 ;bit0 clear
 					  STR        R1,   [R0]                        ;store val
-					  MEND
+					  MEND                                         ;macro end
 ;;=============================macro for gpio clear end======================================;; 
 
 
@@ -170,8 +170,8 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;===========================macro for pushing R4-R11 starting===============================;; 
-                      MACRO
-					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
+                      MACRO                                        ;macro start
+					  MACRO_PUSH_R4_R11                            ;macro name
 					  MRS        R0,   PSP                         ;load PSP in R0
 					  SUBS       R0,   #32                         ;subtract 32 bytes
 					  STR        R4,   [R0, #0]                    ;load data
@@ -187,7 +187,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  MOV        R1,   R11                         ;copy
 					  STR        R1,   [R0, #28]                   ;load data
 					  MSR        PSP,  R0                          ;update new top of stack
-					  MEND
+					  MEND                                         ;macro end
 ;;============================macro for pushing R4-R11 end===================================;; 
 
 
@@ -195,8 +195,8 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;===========================macro for popping R4-R11 starting===============================;; 
-					  MACRO
-					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
+					  MACRO                                        ;macro start
+					  MACRO_POP_R11_R4                             ;macro name
 					  LDR        R4,   [R0, #0]                    ;load data
 					  LDR        R5,   [R0, #4]                    ;load data
 					  LDR        R6,   [R0, #8]                    ;load data
@@ -211,7 +211,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  MOV        R11,  R1                          ;copy
 					  ADDS       R0,   #32                         ;add 32 bytes
 					  MSR        PSP,  R0                          ;update new top of stack
-                      MEND
+                      MEND                                         ;macro end
 ;;==============================macro for popping R4-R11 end=================================;; 
 
 
@@ -219,26 +219,26 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;================================macro for offset starting==================================;; 
-					  MACRO
-					  MACRO_OFFSET_CALC                            ;offset calculation
+					  MACRO                                        ;macro start
+					  MACRO_OFFSET_CALC                            ;macro name
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R0,   [R0]                        ;load task_id val
 					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
-                      MEND
+                      MEND                                         ;macro end
 ;;===================================macro for offset end====================================;; 
 
 
 
 
 ;;==============================macro for saving psp starting================================;; 
-					  MACRO
-					  MACRO_SAVE_PSP                               ;save psp
+					  MACRO                                        ;macro start
+					  MACRO_SAVE_PSP                               ;macro name
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
 					  ADD        R0,   R0,  R1                     ;calc offset from psp base
 					  MRS        R1,   PSP                         ;load PSP in R1
 					  STR        R1,   [R0]                        ;set val to reg
-                      MEND
+                      MEND                                         ;macro end
 ;;=================================macro for saving psp end==================================;; 
 
 
@@ -246,13 +246,13 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;==============================macro for loading psp starting===============================;; 
-					  MACRO
-					  MACRO_LOAD_PSP                               ;load psp
+					  MACRO                                        ;macro start
+					  MACRO_LOAD_PSP                               ;macro name
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_PSP               ;load task psp addr base
 					  ADD        R0,   R0,  R1                     ;calc offset from psp base
 					  LDR        R0,   [R0]                        ;load task PSP
-                      MEND
+                      MEND                                         ;macro end
 ;;=================================macro for loading psp end=================================;; 
 
 
@@ -260,27 +260,27 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;=======================macro for sleep time management starting============================;; 
-					  MACRO
-					  MACRO_KER_SLP_TIME_MGNT                      ;sleep time management
+					  MACRO                                        ;macro start
+$ML_SLP_TM		      MACRO_KER_SLP_TIME_MGNT                      ;macro name, local label
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
 					  LDR        R2,   [R1]                        ;load sleep duration
 					  CMP        R2,   #0                          ;compare with 0
-					  BEQ        %%lbl1                              ;jmp to label
+					  BEQ        $ML_SLP_TM.TREADY                 ;jmp to label
 					  SUBS       R2,   R2, #1                      ;decrease by 1
 					  STR        R2,   [R1]                        ;store new val
 					  CMP        R2,   #0                          ;compare with 0
-					  BEQ        %%lbl1                              ;jmp to label
+					  BEQ        $ML_SLP_TM.TREADY                 ;jmp to label
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
-					  B          %%lbl2                              ;jmp to label
-%%lbl1                  
+					  B          $ML_SLP_TM.UPDSTS                 ;jmp to label
+$ML_SLP_TM.TREADY                                                  ;label->task ready
 					  LDR        R1,   =TASK_READY                 ;set status ready
-%%lbl2                  
+$ML_SLP_TM.UPDSTS                                                  ;label->update status
 					  LDR        R2,   =KER_TASK_STS               ;load status base addr
 					  ADDS       R2,   R2, R0                      ;base+offset
 					  STR        R1,   [R2]                        ;store status
-                      MEND
+                      MEND                                         ;macro end
 ;;=========================macro for sleep time management end===============================;; 
 
 
@@ -288,8 +288,8 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 
 
 ;;============================macro for scheduler starting===================================;; 
-					  MACRO
-					  MACRO_KER_RUN_SCHEDULER                      ;scheduler
+					  MACRO                                        ;macro start
+$ML_SCH_RUN  		  MACRO_KER_RUN_SCHEDULER                      ;macro name, local label
 					  
 					  ;init values before loop entry
 					  LDR        R0,   =0xFF                       ;set val
@@ -302,8 +302,8 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  STR        R0,   [R1]                        ;store task_id
 					  
-;%BT1                  ;Label-> loop start
-					  ;MACRO_KER_SLP_TIME_MGNT
+$ML_SCH_RUN.LP_STRT                                                ;label-> loop start
+					  MACRO_KER_SLP_TIME_MGNT                      ;time mangement
 					  
 					  ;calculate offset R0, load status 
 					  LDR        R1,   =KER_TASK_STS               ;load status base addr
@@ -313,7 +313,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  ;check if task ready
 					  LDR        R2,   =TASK_READY                 ;load ready status
 					  CMP        R1,   R2                          ;compare
-					  ;BNE        %FT1                              ;jmp to label (not ready)
+					  BNE        $ML_SCH_RUN.BL_OR_LP              ;jmp to label (blocked)
 					  
 					  ;task is ready
 					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
@@ -324,7 +324,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  
 					  ;check current priority >= highest priority (lower val is higher priority)
 					  CMP        R3,   R2                          ;compare 
-					  ;BSH        %FT1                              ;jmp to label (no hi prio found)
+					  BHS        $ML_SCH_RUN.BL_OR_LP              ;jmp to label (low prio)
 					  
 					  ;new high prio found
 					  STR        R3,   [R1]                        ;store new hi-prio
@@ -332,21 +332,24 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  LDR        R0,   [R0]                        ;load task_id val
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio task_id addr
 					  STR        R0,   [R1]                        ;store prio task_id
-;%FT1                  ;Label->current task is blocked or lower priority
+$ML_SCH_RUN.BL_OR_LP                                               ;label->blocked or low priority
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id val
 					  ADDS       R1,   R1, #1                      ;increment
 					  LDR        R2,   =KER_NTASK                  ;load ntask addr
 					  LDR        R2,   [R2]                        ;load ntask val
                       CMP        R1,   R2                          ;compare
-					  ;BSH        %FT2                              ;task_id>=ntask
+					  BHS        $ML_SCH_RUN.LP_END                ;task_id>=ntask
 					  STR        R1,   [R0]                        ;store new task_id
-					  ;B          %BT1                              ;loop start
+					  B          $ML_SCH_RUN.LP_STRT               ;loop start
 					  
 					  
-;%FT2                  ;loop complete
-					  
-                      MEND
+$ML_SCH_RUN.LP_END                                                 ;loop complete
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
+					  LDR        R1,   [R1]                        ;load prio tid val
+					  STR        R1,   [R0]                        ;store new prio tid
+                      MEND                                         ;macro end
 ;;================================macro for scheduler end====================================;; 
 
 
@@ -374,6 +377,8 @@ Kernel_Demo_Task0
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00020000                 ;bit1 reset
 					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,    =5                         ;set 5ms sleep
+					  BL         Kernel_Task_Sleep
 					  B          Kernel_Demo_Task0                 ;forever loop
 ;;====================================demo task0 end=========================================;; 
 
@@ -390,6 +395,8 @@ Kernel_Demo_Task1
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00040000                 ;bit1 reset
 					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,    =10                        ;set 10ms sleep
+					  BL         Kernel_Task_Sleep
 					  B          Kernel_Demo_Task1                 ;forever loop
 ;;====================================demo task1 end=========================================;; 
 
@@ -406,6 +413,8 @@ Kernel_Demo_Task2
 					  LDR        R0,   =0x50000018                 ;load BSRR address
 					  LDR        R1,   =0x00080000                 ;bit1 reset
 					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,    =15                        ;set 1ms sleep
+					  BL         Kernel_Task_Sleep
 					  B          Kernel_Demo_Task2                 ;forever loop
 ;;====================================demo task2 end=========================================;; 
 
@@ -554,24 +563,10 @@ SysTick_Handler
 					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
 					  
-					  
 					  MACRO_GPIO_SET                               ;debug pin set
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MACRO_SAVE_PSP                               ;save psp
-					  
-					  ;go to next task
-					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R1,   [R0]                        ;load task_id val
-					  ADDS       R1,   R1, #1                      ;add 1
-					  LDR        R2,   =KER_NTASK                  ;load ntask addr
-					  LDR        R2,   [R2]                        ;load ntask val
-					  CMP        R1,   R2                          ;compare R1 with R2
-					  BLT        SKIP_WRAP_TASK_ID                 ;task_id<ntask
-					  LDR        R1,   =0                          ;roll back
-SKIP_WRAP_TASK_ID
-                      STR        R1,   [R0]                        ;store task_id
-					  
-					  MACRO_KER_SLP_TIME_MGNT                      ;run scheduler
+					  MACRO_KER_RUN_SCHEDULER                      ;run scheduler
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
 					  LDR        R1,   [R1]                        ;load prio tid val
