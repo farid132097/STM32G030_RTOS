@@ -33,6 +33,8 @@ EDF_SRAMM_END         EQU        0x20001FFF
 DEF_PERIPHERAL_BASE   EQU        0x40000000
 DEF_FLASH_BASE        EQU        DEF_CODE_BASE       + 0x00000000
 DEF_SCS_BASE          EQU        0xE000E010
+DEF_NVIC_BASE         EQU        0xE000E100
+DEF_SCB_BASE          EQU        0xE000ED00
 DEF_APB1_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00000000
 DEF_APB2_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00010000
 DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
@@ -48,7 +50,41 @@ DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004
 DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
 DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 ;;===============================define systick addresses end================================;;
-	
+
+
+
+
+
+;;==============================define NVIC addresses starting===============================;; 
+DEF_NVIC_ISER         EQU        DEF_NVIC_BASE       + 0x00000000
+DEF_NVIC_ICER         EQU        DEF_NVIC_BASE       + 0x00000080
+DEF_NVIC_ISPR         EQU        DEF_NVIC_BASE       + 0x00000100
+DEF_NVIC_ICPR         EQU        DEF_NVIC_BASE       + 0x00000180
+DEF_NVIC_IPR0         EQU        DEF_NVIC_BASE       + 0x00000300
+DEF_NVIC_IPR1         EQU        DEF_NVIC_BASE       + 0x00000320
+DEF_NVIC_IPR2         EQU        DEF_NVIC_BASE       + 0x00000340
+DEF_NVIC_IPR3         EQU        DEF_NVIC_BASE       + 0x00000360
+DEF_NVIC_IPR4         EQU        DEF_NVIC_BASE       + 0x00000380
+DEF_NVIC_IPR5         EQU        DEF_NVIC_BASE       + 0x000003A0
+DEF_NVIC_IPR6         EQU        DEF_NVIC_BASE       + 0x000003C0
+DEF_NVIC_IPR7         EQU        DEF_NVIC_BASE       + 0x000003E0
+;;=================================define NVIC addresses end=================================;;
+
+
+
+
+
+;;===============================define SCB addresses starting===============================;; 
+DEF_SCB_CPUID         EQU        DEF_SCB_BASE        + 0x00000000
+DEF_SCB_ICSR          EQU        DEF_SCB_BASE        + 0x00000004
+DEF_SCB_VTOR          EQU        DEF_SCB_BASE        + 0x00000008
+DEF_SCB_AIRCR         EQU        DEF_SCB_BASE        + 0x0000000C
+DEF_SCB_SCR           EQU        DEF_SCB_BASE        + 0x00000010
+DEF_SCB_CCR           EQU        DEF_SCB_BASE        + 0x00000014
+DEF_SCB_SHPR2         EQU        DEF_SCB_BASE        + 0x0000001C
+DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020
+;;==================================define SCB addresses end=================================;;
+
 
 
 
@@ -137,6 +173,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  EXPORT     Kernel_Demo_Task2
 					  EXPORT     Kernel_Task_Sleep
 					  EXPORT     SysTick_Handler
+					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
 
 
@@ -583,19 +620,10 @@ Kernel_Start_Tasks
 
 ;;=================================systick isr starting======================================;; 
 SysTick_Handler
-                      ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
-					  ;Software pushed (address wise, high->low) R11-R4
-                      CPSID      I                                 ;disable interrupts
-					  
-					  MACRO_GPIO_SET                               ;debug pin set
-					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
-					  MACRO_SAVE_PSP                               ;save psp
-					  MACRO_KER_RUN_SCHEDULER ISRLBL0, ISRLBL1     ;run scheduler, local label
-					  MACRO_LOAD_PSP                               ;load psp
-					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
-					  MACRO_GPIO_CLEAR                             ;debug pin clear
-					  
-					  CPSIE      I                                 ;enable interrupt
+                      ;request for PendSV
+					  LDR        R0,   =DEF_SCB_ICSR               ;load SCB->ICSR addr
+					  LDR        R1,   =0x10000000                 ;load set_PendSV bit
+					  STR        R1,   [R0]                        ;sote val
 					  BX         LR                                ;return from interrupt
 ;;====================================systick isr end========================================;; 
 
@@ -630,9 +658,6 @@ Kernel_Task_Sleep
                       PUSH       {LR}                              ;store return addr
 					  CPSID      I                                 ;disable interrupts
 					  
-					  ;MACRO_PUSH_R4_R11                            ;push R4-R11 manually
-					  ;MACRO_SAVE_PSP                               ;save psp
-					  
 					  ;find offset (R0 arg)
                       LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R1]                        ;load task_id val
@@ -649,10 +674,6 @@ Kernel_Task_Sleep
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  STR        R1,   [R2]                        ;store status
 					  
-					  
-					  ;MACRO_KER_RUN_SCHEDULER MLLBL1, MLLBL2       ;run scheduler, local label
-					  ;MACRO_LOAD_PSP                               ;load psp
-					  ;MACRO_POP_R11_R4                             ;pop R11-R4 manually
 					  CPSIE      I                                 ;enable interrupt
 					  POP        {PC}                              ;return
 ;;=================================kernel task sleep end=====================================;; 
