@@ -128,6 +128,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 					  EXPORT     KER_TASK_HI_PRIO
 					  EXPORT     KER_TASK_PRIO_TID
 					  EXPORT     KER_TASK_SLEEP
+					  EXPORT     KER_TASK_YIELD
 					  EXPORT     KER_TASK_STS
 					  EXPORT     KER_TEMP0
 					  EXPORT     KER_TEMP1
@@ -146,6 +147,7 @@ KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priorit
 KER_TASK_HI_PRIO      SPACE      4                                 ;highest priority
 KER_TASK_PRIO_TID     SPACE      4                                 ;highest priority task_id
 KER_TASK_SLEEP        SPACE      4*DEF_KER_MAX_NTASK               ;task sleep duration
+KER_TASK_YIELD        SPACE      4                                 ;task yield status
 KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 KER_TEMP0             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
 KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
@@ -324,6 +326,14 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 ;;=======================macro for sleep time management starting============================;; 
 					  MACRO                                        ;macro start
         		      MACRO_KER_SLP_TIME_MGNT $ML                  ;macro name, local label
+					  LDR        R1,   =KER_TASK_YIELD             ;load yield flag addr
+					  LDR        R2,   [R1]                        ;load yield flag val
+					  TST        R2,   R2                          ;check if !=0
+					  BNE        $ML.SLPDEC                        ;jmp to label
+                      LDR        R2,   =0x00000000                 ;load val 0
+					  STR        R2,   [R1]                        ;clear yield flag
+					  B          $ML.EXIT                          ;jmp to label
+$ML.SLPDEC                                                         ;sleep time decrement
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
@@ -334,6 +344,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  STR        R2,   [R1]                        ;store new val
 					  CMP        R2,   #0                          ;compare with 0
 					  BEQ        $ML.TREADY                        ;jmp to label
+$ML.BLOCKED
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  B          $ML.UPDSTS                        ;jmp to label
 $ML.TREADY                                                         ;label->task ready
@@ -342,6 +353,7 @@ $ML.UPDSTS                                                         ;label->updat
 					  LDR        R2,   =KER_TASK_STS               ;load status base addr
 					  ADDS       R2,   R2, R0                      ;base+offset
 					  STR        R1,   [R2]                        ;store status
+$ML.EXIT                                                           ;label->skip calculations
                       MEND                                         ;macro end
 ;;=========================macro for sleep time management end===============================;; 
 
@@ -486,12 +498,24 @@ Kernel_Demo_Task2
 ;;==================================demo task3 starting======================================;; 
 Kernel_Init
                       PUSH       {LR}
+					  
 					  ;set first task_id
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   =0x00000000                 ;start from 0
 					  STR        R1,   [R0]                        ;store task_id val
+					  
 					  ;set ntask
                       LDR        R0,   =KER_NTASK                  ;load ntask addr
+					  LDR        R1,   =0x00000000                 ;start from 0
+					  STR        R1,   [R0]                        ;store ntask val
+					  
+					  ;set PendSV as lowest priority interrupt
+					  LDR        R0,   =DEF_SCB_SHPR3              ;load SHPR3 addr
+					  LDR        R1,   =0xFF<<16                   ;set lowest priority
+					  STR        R1,   [R0]                        ;store val
+					  
+					  ;clear task yield flag
+                      LDR        R0,   =KER_TASK_YIELD             ;load ntask addr
 					  LDR        R1,   =0x00000000                 ;start from 0
 					  STR        R1,   [R0]                        ;store ntask val
 					  
@@ -673,6 +697,15 @@ Kernel_Task_Sleep
 					  ADDS       R2,   R2, R1                      ;add offset
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  STR        R1,   [R2]                        ;store status
+					  
+					  ;set task yield flag
+                      LDR        R0,   =KER_TASK_YIELD             ;load ntask addr
+					  LDR        R1,   =0x00000001                 ;start from 0
+					  STR        R1,   [R0]                        ;store ntask val
+					  
+					  LDR        R0,   =DEF_SCB_ICSR               ;load SCB->ICSR addr
+					  LDR        R1,   =0x10000000                 ;load set_PendSV bit
+					  STR        R1,   [R0]                        ;sote val
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  POP        {PC}                              ;return
