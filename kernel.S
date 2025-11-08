@@ -330,9 +330,7 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  LDR        R2,   [R1]                        ;load yield flag val
 					  TST        R2,   R2                          ;check if !=0
 					  BNE        $ML.SLPDEC                        ;jmp to label
-                      LDR        R2,   =0x00000000                 ;load val 0
-					  STR        R2,   [R1]                        ;clear yield flag
-					  B          $ML.EXIT                          ;jmp to label
+					  B          $ML.BLOCKED                       ;jmp to label
 $ML.SLPDEC                                                         ;sleep time decrement
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
@@ -418,6 +416,9 @@ $ML2.BL_OR_LP                                                       ;label->bloc
 					  B          $ML2.LP_STRT                      ;loop start
 					  
 $ML2.LP_END                                                        ;loop complete
+                      LDR        R0,   =KER_TASK_YIELD             ;load yeild flag addr
+					  LDR        R1,   =0x00000000                 ;clear yeild flag
+					  STR        R1,   [R0]                        ;store val
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
 					  LDR        R1,   [R1]                        ;load prio tid val
