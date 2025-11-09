@@ -326,23 +326,24 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 ;;=======================macro for sleep time management starting============================;; 
 					  MACRO                                        ;macro start
         		      MACRO_KER_SLP_TIME_MGNT $ML                  ;macro name, local label
-					  LDR        R1,   =KER_TASK_YIELD             ;load yield flag addr
-					  LDR        R2,   [R1]                        ;load yield flag val
-					  TST        R2,   R2                          ;check if !=0
-					  BNE        $ML.SLPDEC                        ;jmp to label
-					  B          $ML.BLOCKED                       ;jmp to label
-$ML.SLPDEC                                                         ;sleep time decrement
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
 					  LDR        R2,   [R1]                        ;load sleep duration
 					  CMP        R2,   #0                          ;compare with 0
 					  BEQ        $ML.TREADY                        ;jmp to label
+					  
+					  ;check if yeild flag(R1 is sleep val addr, R2 is curr sleep val)
+					  LDR        R3,   =KER_TASK_YIELD             ;load yeild flag addr
+					  LDR        R3,   [R3]                        ;load yeild flag val
+					  TST        R3,   R3                          ;test val
+					  BNE        $ML.TBLOCKED                      ;if !=0, skip decrement
+$ML.SLPDEC                                                         ;sleep time decrement
 					  SUBS       R2,   R2, #1                      ;decrease by 1
 					  STR        R2,   [R1]                        ;store new val
 					  CMP        R2,   #0                          ;compare with 0
 					  BEQ        $ML.TREADY                        ;jmp to label
-$ML.BLOCKED
+$ML.TBLOCKED                                                       ;label->task blocked
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
 					  B          $ML.UPDSTS                        ;jmp to label
 $ML.TREADY                                                         ;label->task ready
@@ -351,7 +352,6 @@ $ML.UPDSTS                                                         ;label->updat
 					  LDR        R2,   =KER_TASK_STS               ;load status base addr
 					  ADDS       R2,   R2, R0                      ;base+offset
 					  STR        R1,   [R2]                        ;store status
-$ML.EXIT                                                           ;label->skip calculations
                       MEND                                         ;macro end
 ;;=========================macro for sleep time management end===============================;; 
 
@@ -385,7 +385,7 @@ $ML2.LP_STRT                                                       ;label-> loop
 					  ;check if task ready
 					  LDR        R2,   =TASK_READY                 ;load ready status
 					  CMP        R1,   R2                          ;compare
-					  BNE        $ML2.BL_OR_LP                      ;jmp to label (blocked)
+					  BNE        $ML2.BL_OR_LP                     ;jmp to label (blocked)
 					  
 					  ;task is ready
 					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
@@ -404,7 +404,7 @@ $ML2.LP_STRT                                                       ;label-> loop
 					  LDR        R0,   [R0]                        ;load task_id val
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio task_id addr
 					  STR        R0,   [R1]                        ;store prio task_id
-$ML2.BL_OR_LP                                                       ;label->blocked or low priority
+$ML2.BL_OR_LP                                                      ;label->blocked or low priority
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id val
 					  ADDS       R1,   R1, #1                      ;increment
@@ -433,8 +433,6 @@ $ML2.LP_END                                                        ;loop complet
 ;;===================================idle task starting======================================;; 
 Kernel_Idle_Task
                       ;Idle task, does nothing
-					  LDR        R0,    =100                        ;set 100ms sleep
-					  BL         Kernel_Task_Sleep
 					  B          .                                  ;forever loop
 ;;=====================================idle task end=========================================;; 
 
@@ -661,7 +659,6 @@ PendSV_Handler
                       ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
 					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
-					  
 					  MACRO_GPIO_SET                               ;debug pin set
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MACRO_SAVE_PSP                               ;save psp
@@ -669,7 +666,6 @@ PendSV_Handler
 					  MACRO_LOAD_PSP                               ;load psp
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
 					  MACRO_GPIO_CLEAR                             ;debug pin clear
-					  
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
 ;;================================pending service isr end====================================;; 
@@ -707,6 +703,8 @@ Kernel_Task_Sleep
 					  LDR        R0,   =DEF_SCB_ICSR               ;load SCB->ICSR addr
 					  LDR        R1,   =0x10000000                 ;load set_PendSV bit
 					  STR        R1,   [R0]                        ;sote val
+					  DSB                                          ;data sync barier
+					  ISB                                          ;instruction sync barier
 					  
 					  CPSIE      I                                 ;enable interrupt
 					  POP        {PC}                              ;return

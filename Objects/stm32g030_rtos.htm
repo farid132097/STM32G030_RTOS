@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\stm32g030_rtos.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\stm32g030_rtos.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6220000: Last Updated: Sat Nov  8 19:30:09 2025
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 6220000: Last Updated: Sun Nov  9 10:53:07 2025
 <BR><P>
 <H3>Maximum Stack Usage =         16 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -37,6 +37,7 @@ Mutually Recursive functions
  <LI><a href="#[2]">HardFault_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[2]">HardFault_Handler</a><BR>
  <LI><a href="#[3]">SVC_Handler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[3]">SVC_Handler</a><BR>
  <LI><a href="#[10]">ADC1_IRQHandler</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[10]">ADC1_IRQHandler</a><BR>
+ <LI><a href="#[1f]">Kernel_Idle_Task</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[1f]">Kernel_Idle_Task</a><BR>
  <LI><a href="#[20]">Kernel_Demo_Task0</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[20]">Kernel_Demo_Task0</a><BR>
  <LI><a href="#[21]">Kernel_Demo_Task1</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[21]">Kernel_Demo_Task1</a><BR>
  <LI><a href="#[22]">Kernel_Demo_Task2</a>&nbsp;&nbsp;&nbsp;&rArr;&nbsp;&nbsp;&nbsp;<a href="#[22]">Kernel_Demo_Task2</a><BR>
@@ -319,9 +320,10 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[1f]"></a>Kernel_Idle_Task</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text))
-<BR><BR>[Calls]<UL><LI><a href="#[31]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Task_Sleep
+<BR><BR>[Calls]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Idle_Task
 </UL>
-<BR>[Called By]<UL><LI><a href="#[34]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Start_Tasks
+<BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Idle_Task
+<LI><a href="#[34]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Start_Tasks
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> kernel.o(.text)
 </UL>
@@ -373,8 +375,7 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32g030xx.o(RESET)
 </UL>
 <P><STRONG><a name="[31]"></a>Kernel_Task_Sleep</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, kernel.o(.text))
-<BR><BR>[Called By]<UL><LI><a href="#[1f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Idle_Task
-<LI><a href="#[22]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task2
+<BR><BR>[Called By]<UL><LI><a href="#[22]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task2
 <LI><a href="#[21]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task1
 <LI><a href="#[20]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Kernel_Demo_Task0
 </UL>
