@@ -707,7 +707,7 @@ Kernel_Task_Sleep
 
 
 					  
-					  
+					  ALIGN      4
 					  END                                          ;end of file
 					  
 					  
