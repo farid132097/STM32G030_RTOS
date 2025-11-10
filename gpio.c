@@ -2,8 +2,9 @@
 
 #include "stm32g030xx.h"
 #include "kernel.h"
+#include "gpio.h"
 
-void Task_PA1_Toggle(void){
+__attribute__((noreturn)) void Task_PA1_Toggle(void){
 	
 	RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;
 	GPIOA->MODER &=~GPIO_MODER_MODE1_Msk;
@@ -17,7 +18,7 @@ void Task_PA1_Toggle(void){
 	}
 }
 
-void Task_PA2_Toggle(void){
+__attribute__((noreturn)) void Task_PA2_Toggle(void){
 	
 	RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;
 	GPIOA->MODER &=~GPIO_MODER_MODE2_Msk;
@@ -31,7 +32,7 @@ void Task_PA2_Toggle(void){
 	}
 }
 
-void Task_PA3_Toggle(void){
+__attribute__((noreturn)) void Task_PA3_Toggle(void){
 	
 	RCC->IOPENR  |= RCC_IOPENR_GPIOAEN;
 	GPIOA->MODER &=~GPIO_MODER_MODE3_Msk;
@@ -44,3 +45,6 @@ void Task_PA3_Toggle(void){
 		Kernel_Task_Sleep(300);
 	}
 }
+
+
+

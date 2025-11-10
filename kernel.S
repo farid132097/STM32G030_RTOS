@@ -1,10 +1,10 @@
  
  
- ; File          : kernel.S
+ ; File          : kernel.s
  ; Author        : MD. Faridul Islam (faridmdislam@gmail.com)
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : Nov 10, 2025, 01:06 PM
+ ; Last Modified : Nov 10, 2025, 11:01 PM
 
 
 
