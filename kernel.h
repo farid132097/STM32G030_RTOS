@@ -14,9 +14,9 @@
 
 void    Kernel_Init(void);
 void    Kernel_Start_Tasks(void);
-void    Kernel_Task_Create(void (*func)(void), uint8_t priority);
+void    Kernel_Task_Create(void (*func)(void), unsigned char priority);
 void    Kernel_Idle_Task(void);
-void    Kernel_Task_Sleep(uint32_t val);
+void    Kernel_Task_Sleep(unsigned int val);
 
 #endif
 
