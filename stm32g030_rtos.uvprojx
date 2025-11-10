@@ -404,6 +404,11 @@
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
             </File>
+            <File>
+              <FileName>gpio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\gpio.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -428,11 +433,6 @@
               <FileName>kernel.s</FileName>
               <FileType>2</FileType>
               <FilePath>.\kernel.s</FilePath>
-            </File>
-            <File>
-              <FileName>gpio.s</FileName>
-              <FileType>2</FileType>
-              <FilePath>.\gpio.s</FilePath>
             </File>
           </Files>
         </Group>

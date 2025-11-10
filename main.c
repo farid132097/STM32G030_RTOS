@@ -4,15 +4,12 @@
 #include "gpio.h"
 
 
-
 int main(void){
 	
-	Delay();
-	GPIO_Init();
 	Kernel_Init();
-	Kernel_Task_Create(Kernel_Demo_Task0, 0);
-	Kernel_Task_Create(Kernel_Demo_Task1, 1);
-	Kernel_Task_Create(Kernel_Demo_Task2, 2);
+	Kernel_Task_Create(Task_PA1_Toggle, 0);
+	Kernel_Task_Create(Task_PA2_Toggle, 1);
+	Kernel_Task_Create(Task_PA3_Toggle, 2);
 	Kernel_Start_Tasks();
 	
 	while(1){

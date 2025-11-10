@@ -4,7 +4,7 @@
  ; Author        : MD. Faridul Islam (faridmdislam@gmail.com)
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : Nov 02, 2025, 11:55 AM
+ ; Last Modified : Nov 10, 2025, 01:06 PM
 
 
 
@@ -31,13 +31,16 @@ DEF_CODE_BASE         EQU        0x00000000
 DEF_SRAM_BASE         EQU        0x20000000
 EDF_SRAMM_END         EQU        0x20001FFF
 DEF_PERIPHERAL_BASE   EQU        0x40000000
+DEF_APB1_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00000000
+DEF_APB2_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00010000
+DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
+DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000
+DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000
+DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000
 DEF_FLASH_BASE        EQU        DEF_CODE_BASE       + 0x00000000
 DEF_SCS_BASE          EQU        0xE000E010
 DEF_NVIC_BASE         EQU        0xE000E100
 DEF_SCB_BASE          EQU        0xE000ED00
-DEF_APB1_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00000000
-DEF_APB2_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00010000
-DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
 ;;=================================define address bases end==================================;; 
 
 
@@ -89,6 +92,23 @@ DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020
 
 
 
+;;===========================define GPIO related addresses starting==========================;; 
+DEF_RCC_IOPENR        EQU        DEF_RCC_BASE        + 0x00000034
+DEF_GPIOA_BASE        EQU        DEF_GPIO_BASE       + 0x00000000
+DEF_GPIOB_BASE        EQU        DEF_GPIO_BASE       + 0x00000400
+DEF_GPIOC_BASE        EQU        DEF_GPIO_BASE       + 0x00000800
+DEF_GPIOD_BASE        EQU        DEF_GPIO_BASE       + 0x00000C00
+DEF_GPIOE_BASE        EQU        DEF_GPIO_BASE       + 0x00001000
+DEF_GPIOF_BASE        EQU        DEF_GPIO_BASE       + 0x00001400
+DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000
+DEF_GPIOA_ODR         EQU        DEF_GPIOA_BASE      + 0x00000014
+DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
+;;=============================define GPIO related addresses end=============================;; 
+
+
+
+
+
 ;;============================define systick addresses starting==============================;; 
 DEF_KER_MAX_NTASK     EQU        0x0000000A                        ;max 10 tasks
 DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes stack
@@ -112,7 +132,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 
 
 ;;==============================RAM area definition starting=================================;; 
-					  AREA       |.data|, DATA, READWRITE, ALIGN=2
+					  AREA       |.data|, DATA, READWRITE, ALIGN=3
 ;;================================RAM area definition end====================================;; 
 
 
@@ -130,8 +150,6 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 					  EXPORT     KER_TASK_SLEEP
 					  EXPORT     KER_TASK_YIELD
 					  EXPORT     KER_TASK_STS
-					  EXPORT     KER_TEMP0
-					  EXPORT     KER_TEMP1
 ;;===========================global variable declaration end=================================;; 
 
 
@@ -149,8 +167,6 @@ KER_TASK_PRIO_TID     SPACE      4                                 ;highest prio
 KER_TASK_SLEEP        SPACE      4*DEF_KER_MAX_NTASK               ;task sleep duration
 KER_TASK_YIELD        SPACE      4                                 ;task yield status
 KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
-KER_TEMP0             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
-KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary storage
 ;;=============================global variable definition end================================;; 
 
 
@@ -170,13 +186,43 @@ KER_TEMP1             SPACE      4*DEF_KER_MAX_NTASK               ;temporary st
 					  EXPORT     Kernel_Start_Tasks
 					  EXPORT     Kernel_Task_Create
 					  EXPORT     Kernel_Idle_Task
-					  EXPORT     Kernel_Demo_Task0
-					  EXPORT     Kernel_Demo_Task1
-					  EXPORT     Kernel_Demo_Task2
 					  EXPORT     Kernel_Task_Sleep
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
+
+
+
+
+
+;;===========================macro for gpio init starting====================================;; 
+                      MACRO                                        ;macro start
+					  MACRO_GPIO_INIT                              ;macro name
+					  
+					  ;enable clock from rcc
+                      LDR        R0,   =DEF_RCC_IOPENR             ;load IOPENR address
+					  LDR        R1,   [R0]                        ;load IOPENR val
+					  LDR        R2,   =0x00000001                 ;mask bit0
+	                  ORRS       R1,   R1, R2                      ;set bit 0
+					  STR        R1,   [R0]                        ;store val to IOPENR
+					  
+					  ;set ODR pin low
+					  LDR        R0,   =DEF_GPIOA_ODR              ;load ODR address
+					  LDR        R1,   [R0]                        ;load ODR val
+					  LDR        R2,   =0xFFF0                     ;bit0-bit3 clear
+					  ANDS       R1,   R1, R2                      ;set bit of the pins
+					  STR        R1,   [R0]                        ;store val to ODR
+					  
+					  ;set pin as general purpose i/o
+					  LDR        R0,   =DEF_GPIOA_MODER            ;load MODER address
+					  LDR        R1,   [R0]                        ;load MODER val
+					  LDR        R2,   =0xFFFFFF00                 ;to clear mode0-3
+					  ANDS       R1,   R1, R2                      ;clear mode0-3
+					  LDR        R2,   =0x00000055                 ;to output mode
+					  ORRS       R1,   R1, R2                      ;set output mode
+					  STR        R1,   [R0]                        ;store val GPIOA
+                      MEND                                         ;macro end
+;;==============================macro for gpio init end======================================;; 
 
 
 
@@ -440,63 +486,11 @@ Kernel_Idle_Task
 
 
 
-;;==================================demo task0 starting======================================;; 
-Kernel_Demo_Task0
-                      ;toggle pin PA1
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00000002                 ;bit1 set
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00020000                 ;bit1 reset
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,    =5                         ;set 5ms sleep
-					  BL         Kernel_Task_Sleep
-					  B          Kernel_Demo_Task0                 ;forever loop
-;;====================================demo task0 end=========================================;; 
-
-
-
-
-
-;;==================================demo task1 starting======================================;; 
-Kernel_Demo_Task1
-					  ;toggle pin PA2
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00000004                 ;bit1 set
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00040000                 ;bit1 reset
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,    =10                        ;set 10ms sleep
-					  BL         Kernel_Task_Sleep
-					  B          Kernel_Demo_Task1                 ;forever loop
-;;====================================demo task1 end=========================================;; 
-
-
-
-
-
-;;==================================demo task2 starting======================================;; 
-Kernel_Demo_Task2
-					  ;toggle pin PA3
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00000008                 ;bit1 set
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00080000                 ;bit1 reset
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,    =15                        ;set 1ms sleep
-					  BL         Kernel_Task_Sleep
-					  B          Kernel_Demo_Task2                 ;forever loop
-;;====================================demo task2 end=========================================;; 
-
-
-
-
-
 ;;==================================demo task3 starting======================================;; 
 Kernel_Init
                       PUSH       {LR}
+					  
+					  ;MACRO_GPIO_INIT                              ;gpio init for debug
 					  
 					  ;set first task_id
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
@@ -659,13 +653,13 @@ PendSV_Handler
                       ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
 					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
-					  MACRO_GPIO_SET                               ;debug pin set
+					  ;MACRO_GPIO_SET                               ;debug pin set
 					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
 					  MACRO_SAVE_PSP                               ;save psp
 					  MACRO_KER_RUN_SCHEDULER ISRLBL2, ISRLBL3     ;run scheduler, local label
 					  MACRO_LOAD_PSP                               ;load psp
 					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
-					  MACRO_GPIO_CLEAR                             ;debug pin clear
+					  ;MACRO_GPIO_CLEAR                             ;debug pin clear
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
 ;;================================pending service isr end====================================;; 

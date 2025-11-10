@@ -15,12 +15,7 @@
 void    Kernel_Init(void);
 void    Kernel_Start_Tasks(void);
 void    Kernel_Task_Create(void (*func)(void), uint8_t priority);
-
 void    Kernel_Idle_Task(void);
-void    Kernel_Demo_Task0(void);
-void    Kernel_Demo_Task1(void);
-void    Kernel_Demo_Task2(void);
-
 void    Kernel_Task_Sleep(uint32_t val);
 
 #endif
