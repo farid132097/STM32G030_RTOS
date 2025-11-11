@@ -5,7 +5,7 @@
   Author        : MD. Faridul Islam (faridmdislam@gmail.com)
   Description   : ARM Cortex M0+ kernel for bare-metal RTOS
   Created       : Sep 02, 2025, 09:30 PM
-  Last Modified : Nov 10, 2025, 11:01 PM
+  Last Modified : Nov 11, 2025, 06:44 PM
 	
 */
 
@@ -22,6 +22,7 @@ void     Kernel_Task_Sleep(unsigned int val);
 uint32_t Kernel_Tick_SS32_Get(void);
 uint64_t Kernel_Tick_SS64_Get(void);
 uint32_t Kernel_Tick_S_Get(void);
+uint32_t Kernel_CPU_Usage_Get(void);
 
 #endif
 

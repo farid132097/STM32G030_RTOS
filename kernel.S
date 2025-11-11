@@ -2,6 +2,7 @@
  
  ; File          : kernel.S
  ; Author        : MD. Faridul Islam (faridmdislam@gmail.com)
+ ; Source        : https://github.com/farid132097/STM32G030_RTOS
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Created       : Sep 02, 2025, 09:30 PM
  ; Last Modified : Nov 11, 2025, 02:40 PM
@@ -143,7 +144,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
                       EXPORT     KER_TICK_SS
 					  EXPORT     KER_TICK_S
 					  EXPORT     KER_CMP_TICK_CNT
-					  EXPORT     KER_IDLE_TICK_CNT
+					  EXPORT     KER_ACTV_TICK_CNT
 					  EXPORT     KER_CPU_USAGE
 					  EXPORT     KER_CPU_USAGE_AVG
                       EXPORT     KER_TASK_STACK
@@ -166,7 +167,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 KER_TICK_SS           SPACE      8                                 ;64 bit sub-seconds counter
 KER_TICK_S            SPACE      4                                 ;32 bit seconds counter
 KER_CMP_TICK_CNT      SPACE      4                                 ;reference tick counter
-KER_IDLE_TICK_CNT     SPACE      4                                 ;idle task entry counter
+KER_ACTV_TICK_CNT     SPACE      4                                 ;active task entry counter
 KER_CPU_USAGE         SPACE      4                                 ;instantenious cpu usage
 KER_CPU_USAGE_AVG     SPACE      4                                 ;average cpu usage
 KER_NTASK             SPACE      4                                 ;total created tasks
@@ -201,6 +202,7 @@ KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 					  EXPORT     Kernel_Task_Sleep
 					  EXPORT     Kernel_Tick_SS32_Get
 					  EXPORT     Kernel_Tick_SS64_Get
+				      EXPORT     Kernel_CPU_Usage_Get
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
@@ -220,7 +222,7 @@ KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 					  STR        R1,   [R0]                        ;store tick_s val
 					  LDR        R0,   =KER_CMP_TICK_CNT           ;load all_tick_cnt addr
 					  STR        R1,   [R0]                        ;store all_tick_cnt val
-					  LDR        R0,   =KER_IDLE_TICK_CNT          ;load idle_tick_cnt addr
+					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load active_tick_cnt addr
 					  STR        R1,   [R0]                        ;store idle_tick_cnt val
 					  LDR        R0,   =KER_CPU_USAGE              ;load cpu_usage addr
 					  STR        R1,   [R0]                        ;store cpu_usage val
@@ -528,7 +530,6 @@ $ML2.BL_OR_LP                                                      ;label->block
 					  BHS        $ML2.LP_END                       ;task_id>=ntask
 					  STR        R1,   [R0]                        ;store new task_id
 					  B          $ML2.LP_STRT                      ;loop start
-					  
 $ML2.LP_END                                                        ;loop complete
                       LDR        R0,   =KER_TASK_YIELD             ;load yeild flag addr
 					  LDR        R1,   =0x00000000                 ;clear yeild flag
@@ -566,15 +567,29 @@ $ML3.EXIT
 ;;========================macro for cpu usage calculation starting===========================;; 
 					  MACRO                                        ;macro start
 					  MACRO_CPU_USAGE  $ML4                        ;macro name
-					  LDR        R0,   =KER_SYSTICK_SS             ;load systick ss base addr
-					  LDR        R1,   [R0]                        ;load systick ss LSW val
+					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   [R0]                        ;load task_id
+					  TST        R1,   R1                          ;check val
+					  BEQ        $ML4.SKIP_INC                     ;if task = idle task, skip
+					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load active_tick_cnt addr
+					  LDR        R1,   [R0]                        ;load active_tick_cnt
 					  ADDS       R1,   R1,  #1                     ;increment val
-					  STR        R1,   [R0]                        ;store val
-					  BNE        $ML3.EXIT                         ;jmp to label
-					  LDR        R1,   [R0, #4]                    ;load systick ss HSW val
-					  ADDS       R1,   R1,  #1                     ;increment val
-					  STR        R1,   [R0, #4]                    ;store val
-$ML3.EXIT
+					  STR        R1,   [R0]                        ;store val, R1 active_tick_cnt
+$ML4.SKIP_INC                                                      ;label->no increment
+					  LDR        R0,   =KER_CMP_TICK_CNT           ;load cmp_tick_cnt addr
+					  LDR        R2,   [R0]                        ;load cmp_tick_cnt val
+					  ADDS       R2,   R2,  #1                     ;increment val
+					  LDR        R3,   =1000                       ;load compare val
+					  CMP        R2,   R3                          ;compare values
+					  BLO        $ML4.SKIP_WRAP                    ;jmp to label
+					  LDR        R3,   =KER_CPU_USAGE              ;load cpu_usage addr
+					  STR        R1,   [R3]                        ;store
+					  LDR        R2,   =0x00000000                 ;set val to 0
+					  LDR        R3,   =KER_ACTV_TICK_CNT          ;load cmp_tick_cnt addr
+					  STR        R2,   [R3]                        ;store
+$ML4.SKIP_WRAP                                                     ;label->no wrapping
+					  STR        R2,   [R0]                        ;store new val
+$ML4.EXIT                                                          ;label->exit
                       MEND                                         ;macro end
 ;;===========================macro for cpu usage calculation end=============================;; 
 
@@ -747,6 +762,7 @@ PendSV_Handler
 					  MACRO_CONTEXT_SAVE                           ;save context
 					  MACRO_SS_CNT                                 ;sub-seconds counter
 					  MACRO_KER_RUN_SCHEDULER ISRLBL2, ISRLBL3     ;run scheduler, local label
+					  MACRO_CPU_USAGE         ISRLBL4              ;calculate cpu usage
 					  MACRO_CONTEXT_RESTORE                        ;restore context
 					  MACRO_GPIO_CLEAR                             ;debug pin clear
 					  CPSIE      I                                 ;enable interrupt
@@ -825,6 +841,17 @@ Kernel_Tick_S_Get
 					  LDR        R0,   [R0]                        ;load seconds val
 					  BX         LR                                ;return
 ;;============================kernel tick seconds val get end================================;; 
+
+
+
+
+
+;;==============================kernel cpu usage get starting================================;; 
+Kernel_CPU_Usage_Get
+					  LDR        R0,   =KER_CPU_USAGE              ;load cpu_usage addr
+					  LDR        R0,   [R0]                        ;load cpu_usage val
+					  BX         LR                                ;return
+;;=================================kernel cpu usage get end==================================;; 
 
 
 
