@@ -1,10 +1,10 @@
  
  
- ; File          : kernel.s
+ ; File          : kernel.S
  ; Author        : MD. Faridul Islam (faridmdislam@gmail.com)
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : Nov 10, 2025, 11:01 PM
+ ; Last Modified : Nov 11, 2025, 02:40 PM
 
 
 
@@ -140,6 +140,12 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 
 
 ;;=========================global variable declaration starting==============================;; 
+                      EXPORT     KER_TICK_SS
+					  EXPORT     KER_TICK_S
+					  EXPORT     KER_CMP_TICK_CNT
+					  EXPORT     KER_IDLE_TICK_CNT
+					  EXPORT     KER_CPU_USAGE
+					  EXPORT     KER_CPU_USAGE_AVG
                       EXPORT     KER_TASK_STACK
 					  EXPORT     KER_TASK_ID
 					  EXPORT     KER_NTASK
@@ -157,9 +163,15 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 
 
 ;;===========================global variable definition starting=============================;; 
+KER_TICK_SS           SPACE      8                                 ;64 bit sub-seconds counter
+KER_TICK_S            SPACE      4                                 ;32 bit seconds counter
+KER_CMP_TICK_CNT      SPACE      4                                 ;reference tick counter
+KER_IDLE_TICK_CNT     SPACE      4                                 ;idle task entry counter
+KER_CPU_USAGE         SPACE      4                                 ;instantenious cpu usage
+KER_CPU_USAGE_AVG     SPACE      4                                 ;average cpu usage
+KER_NTASK             SPACE      4                                 ;total created tasks
 KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE+0x08          ;total stack space
 KER_TASK_ID           SPACE      4                                 ;current task id
-KER_NTASK             SPACE      4                                 ;total created tasks
 KER_TASK_PSP          SPACE      4*DEF_KER_MAX_NTASK               ;PSP for 10 tasks
 KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priority
 KER_TASK_HI_PRIO      SPACE      4                                 ;highest priority
@@ -187,9 +199,41 @@ KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 					  EXPORT     Kernel_Task_Create
 					  EXPORT     Kernel_Idle_Task
 					  EXPORT     Kernel_Task_Sleep
+					  EXPORT     Kernel_Tick_SS32_Get
+					  EXPORT     Kernel_Tick_SS64_Get
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
+
+
+
+
+
+;;=======================macro for system variable init starting=============================;; 
+                      MACRO                                        ;macro start
+					  MACRO_SYS_VAR_INIT                           ;macro name
+                      LDR        R0,   =KER_TICK_SS                ;load tick_ss addr
+					  LDR        R1,   =0x00000000                 ;set val 0
+					  STR        R1,   [R0]                        ;store tick_ssL val
+					  STR        R1,   [R0,  #4]                   ;store tick_ssH val
+					  LDR        R0,   =KER_TICK_S                 ;load tick_s addr
+					  STR        R1,   [R0]                        ;store tick_s val
+					  LDR        R0,   =KER_CMP_TICK_CNT           ;load all_tick_cnt addr
+					  STR        R1,   [R0]                        ;store all_tick_cnt val
+					  LDR        R0,   =KER_IDLE_TICK_CNT          ;load idle_tick_cnt addr
+					  STR        R1,   [R0]                        ;store idle_tick_cnt val
+					  LDR        R0,   =KER_CPU_USAGE              ;load cpu_usage addr
+					  STR        R1,   [R0]                        ;store cpu_usage val
+					  LDR        R0,   =KER_CPU_USAGE_AVG          ;load cpu_usage_avg addr
+					  STR        R1,   [R0]                        ;store cpu_usage_avg val
+					  LDR        R0,   =KER_NTASK                  ;load ntask addr
+					  STR        R1,   [R0]                        ;store ntask val
+                      LDR        R0,   =KER_TASK_ID                ;load task_id addr
+					  STR        R1,   [R0]                        ;store task_id val
+                      LDR        R0,   =KER_TASK_YIELD             ;load ntask addr
+					  STR        R1,   [R0]                        ;store ntask val
+                      MEND                                         ;macro end
+;;==========================macro for system variable init end===============================;; 
 
 
 
@@ -369,6 +413,30 @@ KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 
 
 
+;;=============================macro for context save starting===============================;; 
+					  MACRO                                        ;macro start
+					  MACRO_CONTEXT_SAVE                           ;macro name
+					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
+					  MACRO_SAVE_PSP                               ;save psp
+                      MEND                                         ;macro end
+;;================================macro for context save end=================================;; 
+
+
+
+
+
+;;============================macro for context restore starting=============================;; 
+					  MACRO                                        ;macro start
+					  MACRO_CONTEXT_RESTORE                        ;macro name
+					  MACRO_LOAD_PSP                               ;load psp
+					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
+                      MEND                                         ;macro end
+;;==============================macro for context restore end================================;; 
+
+
+
+
+
 ;;=======================macro for sleep time management starting============================;; 
 					  MACRO                                        ;macro start
         		      MACRO_KER_SLP_TIME_MGNT $ML                  ;macro name, local label
@@ -476,6 +544,44 @@ $ML2.LP_END                                                        ;loop complet
 
 
 
+;;==========================macro for sub-seconds counter starting===========================;; 
+					  MACRO                                        ;macro start
+					  MACRO_SS_CNT     $ML3                        ;macro name
+					  LDR        R0,   =KER_TICK_SS                ;load tick_ss base addr
+					  LDR        R1,   [R0]                        ;load systick ss LSW val
+					  ADDS       R1,   R1,  #1                     ;increment val
+					  STR        R1,   [R0]                        ;store val
+					  BNE        $ML3.EXIT                         ;jmp to label
+					  LDR        R1,   [R0, #4]                    ;load systick ss HSW val
+					  ADDS       R1,   R1,  #1                     ;increment val
+					  STR        R1,   [R0, #4]                    ;store val
+$ML3.EXIT
+                      MEND                                         ;macro end
+;;============================macro for sub-seconds counter end==============================;; 
+
+
+
+
+
+;;========================macro for cpu usage calculation starting===========================;; 
+					  MACRO                                        ;macro start
+					  MACRO_CPU_USAGE  $ML4                        ;macro name
+					  LDR        R0,   =KER_SYSTICK_SS             ;load systick ss base addr
+					  LDR        R1,   [R0]                        ;load systick ss LSW val
+					  ADDS       R1,   R1,  #1                     ;increment val
+					  STR        R1,   [R0]                        ;store val
+					  BNE        $ML3.EXIT                         ;jmp to label
+					  LDR        R1,   [R0, #4]                    ;load systick ss HSW val
+					  ADDS       R1,   R1,  #1                     ;increment val
+					  STR        R1,   [R0, #4]                    ;store val
+$ML3.EXIT
+                      MEND                                         ;macro end
+;;===========================macro for cpu usage calculation end=============================;; 
+
+
+
+
+
 ;;===================================idle task starting======================================;; 
 Kernel_Idle_Task
                       ;Idle task, does nothing
@@ -490,27 +596,13 @@ Kernel_Idle_Task
 Kernel_Init
                       PUSH       {LR}
 					  
-					  ;MACRO_GPIO_INIT                              ;gpio init for debug
-					  
-					  ;set first task_id
-                      LDR        R0,   =KER_TASK_ID                ;load task_id addr
-					  LDR        R1,   =0x00000000                 ;start from 0
-					  STR        R1,   [R0]                        ;store task_id val
-					  
-					  ;set ntask
-                      LDR        R0,   =KER_NTASK                  ;load ntask addr
-					  LDR        R1,   =0x00000000                 ;start from 0
-					  STR        R1,   [R0]                        ;store ntask val
+					  MACRO_GPIO_INIT                              ;gpio init for debug
+					  MACRO_SYS_VAR_INIT                           ;system variable init
 					  
 					  ;set PendSV as lowest priority interrupt
 					  LDR        R0,   =DEF_SCB_SHPR3              ;load SHPR3 addr
 					  LDR        R1,   =0xFF<<16                   ;set lowest priority
 					  STR        R1,   [R0]                        ;store val
-					  
-					  ;clear task yield flag
-                      LDR        R0,   =KER_TASK_YIELD             ;load ntask addr
-					  LDR        R1,   =0x00000000                 ;start from 0
-					  STR        R1,   [R0]                        ;store ntask val
 					  
 					  LDR        R0,   =Kernel_Idle_Task           ;load idle task addr
 					  LDR        R1,   =0xFF                       ;lowest priority
@@ -525,8 +617,6 @@ Kernel_Init
 
 ;;=================================task create starting======================================;; 
 Kernel_Task_Create
-                      PUSH       {LR}
-					  
 					  ;calculate stack top for this task (R0:R1 are used by arguments)
 					  LDR        R2,   =DEF_KER_STACK_SIZE         ;load each stack size
 					  LDR        R3,   =KER_NTASK                  ;load ntask addr
@@ -596,7 +686,7 @@ Kernel_Task_Create
 					  ADDS       R1,   R1, #1                      ;ntask+1
 					  STR        R1,   [R0]                        ;save PSP
 					  
-					  POP        {PC}                              ;return
+					  BX         LR                                ;return
 ;;====================================task create end========================================;; 
 
 
@@ -641,7 +731,7 @@ SysTick_Handler
 					  LDR        R0,   =DEF_SCB_ICSR               ;load SCB->ICSR addr
 					  LDR        R1,   =0x10000000                 ;load set_PendSV bit
 					  STR        R1,   [R0]                        ;sote val
-					  BX         LR                                ;return from interrupt
+					  BX         LR                                ;return
 ;;====================================systick isr end========================================;; 
 
 
@@ -653,13 +743,12 @@ PendSV_Handler
                       ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
 					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
-					  ;MACRO_GPIO_SET                               ;debug pin set
-					  MACRO_PUSH_R4_R11                            ;push R4-R11 manually
-					  MACRO_SAVE_PSP                               ;save psp
+					  MACRO_GPIO_SET                               ;debug pin set
+					  MACRO_CONTEXT_SAVE                           ;save context
+					  MACRO_SS_CNT                                 ;sub-seconds counter
 					  MACRO_KER_RUN_SCHEDULER ISRLBL2, ISRLBL3     ;run scheduler, local label
-					  MACRO_LOAD_PSP                               ;load psp
-					  MACRO_POP_R11_R4                             ;pop R11-R4 manually
-					  ;MACRO_GPIO_CLEAR                             ;debug pin clear
+					  MACRO_CONTEXT_RESTORE                        ;restore context
+					  MACRO_GPIO_CLEAR                             ;debug pin clear
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
 ;;================================pending service isr end====================================;; 
@@ -670,7 +759,6 @@ PendSV_Handler
 
 ;;==============================kernel task sleep starting===================================;; 
 Kernel_Task_Sleep
-                      PUSH       {LR}                              ;store return addr
 					  CPSID      I                                 ;disable interrupts
 					  
 					  ;find offset (R0 arg)
@@ -701,12 +789,47 @@ Kernel_Task_Sleep
 					  ISB                                          ;instruction sync barier
 					  
 					  CPSIE      I                                 ;enable interrupt
-					  POP        {PC}                              ;return
+					  BX         LR                                ;return
 ;;=================================kernel task sleep end=====================================;; 
 
 
 
-					  
+
+
+;;==========================kernel tick 32bit SS val get starting============================;; 
+Kernel_Tick_SS32_Get
+					  LDR        R0,   =KER_TICK_SS                ;load sub-seconds addr
+					  LDR        R0,   [R0]                        ;load sub-seconds val
+					  BX         LR                                ;return
+;;============================kernel tick 32bit SS val get end===============================;; 
+
+
+
+
+
+;;==========================kernel tick 64bit SS val get starting============================;;   
+Kernel_Tick_SS64_Get
+					  LDR        R0,   =KER_TICK_SS                ;load sub-seconds addr
+					  LDR        R1,   [R0, #4]                    ;load HW sub-seconds val
+					  LDR        R0,   [R0]                        ;load LW sub-seconds val
+					  BX         LR                                ;return
+;;============================kernel tick 64bit SS val get end===============================;; 
+
+
+
+
+
+;;==========================kernel tick seconds val get starting=============================;; 
+Kernel_Tick_S_Get
+					  LDR        R0,   =KER_TICK_S                 ;load seconds addr
+					  LDR        R0,   [R0]                        ;load seconds val
+					  BX         LR                                ;return
+;;============================kernel tick seconds val get end================================;; 
+
+
+
+
+
 					  ALIGN      4
 					  END                                          ;end of file
 					  
