@@ -5,7 +5,7 @@
  ; Source        : https://github.com/farid132097/STM32G030_RTOS
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : Nov 11, 2025, 02:40 PM
+ ; Last Modified : Nov 12, 2025, 11:36 AM
 
 
 
@@ -569,26 +569,26 @@ $ML3.EXIT
 					  MACRO_CPU_USAGE  $ML4                        ;macro name
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id
+					  LDR        R2,   =KER_ACTV_TICK_CNT          ;load active_tick_cnt addr
+					  LDR        R0,   [R2]                        ;load active_tick_cnt
 					  TST        R1,   R1                          ;check val
 					  BEQ        $ML4.SKIP_INC                     ;if task = idle task, skip
-					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load active_tick_cnt addr
-					  LDR        R1,   [R0]                        ;load active_tick_cnt
-					  ADDS       R1,   R1,  #1                     ;increment val
-					  STR        R1,   [R0]                        ;store val, R1 active_tick_cnt
+					  ADDS       R0,   R0,  #1                     ;increment val
+					  STR        R0,   [R2]                        ;store val, R0 active_tick_cnt
 $ML4.SKIP_INC                                                      ;label->no increment
-					  LDR        R0,   =KER_CMP_TICK_CNT           ;load cmp_tick_cnt addr
-					  LDR        R2,   [R0]                        ;load cmp_tick_cnt val
+					  LDR        R1,   =KER_CMP_TICK_CNT           ;load cmp_tick_cnt addr
+					  LDR        R2,   [R1]                        ;load cmp_tick_cnt val
 					  ADDS       R2,   R2,  #1                     ;increment val
 					  LDR        R3,   =1000                       ;load compare val
 					  CMP        R2,   R3                          ;compare values
 					  BLO        $ML4.SKIP_WRAP                    ;jmp to label
 					  LDR        R3,   =KER_CPU_USAGE              ;load cpu_usage addr
-					  STR        R1,   [R3]                        ;store
+					  STR        R0,   [R3]                        ;store
 					  LDR        R2,   =0x00000000                 ;set val to 0
-					  LDR        R3,   =KER_ACTV_TICK_CNT          ;load cmp_tick_cnt addr
-					  STR        R2,   [R3]                        ;store
+					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load cmp_tick_cnt addr
+					  STR        R2,   [R0]                        ;store
 $ML4.SKIP_WRAP                                                     ;label->no wrapping
-					  STR        R2,   [R0]                        ;store new val
+					  STR        R2,   [R1]                        ;store new val
 $ML4.EXIT                                                          ;label->exit
                       MEND                                         ;macro end
 ;;===========================macro for cpu usage calculation end=============================;; 
