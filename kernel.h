@@ -6,7 +6,7 @@
 	Source        : https://github.com/farid132097/STM32G030_RTOS
   Description   : ARM Cortex M0+ kernel for bare-metal RTOS
   Created       : Sep 02, 2025, 09:30 PM
-  Last Modified : Nov 11, 2025, 06:44 PM
+  Last Modified : Nov 12, 2025, 11:59 AM
 	
 */
 

@@ -47,4 +47,11 @@ __attribute__((noreturn)) void Task_PA3_Toggle(void){
 }
 
 
+__attribute__((noreturn)) void Task_Dummy(void){
+	
+	
+	while(1){
+		
+	}
+}
 
