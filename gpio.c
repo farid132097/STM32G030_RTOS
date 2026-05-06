@@ -16,6 +16,7 @@ __attribute__((noreturn)) void Task_PA1_Toggle(void){
 		GPIOA->BSRR |= GPIO_BSRR_BR1;
 		Kernel_Task_Sleep(100);
 	}
+
 }
 
 __attribute__((noreturn)) void Task_PA2_Toggle(void){
