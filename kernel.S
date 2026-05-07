@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 07, 2026, 02:48 PM
+ ; Last Modified : May 07, 2026, 05:33 PM
 
 
 
@@ -24,6 +24,14 @@
 ;;============================constant area definition starting==============================;; 
                       AREA       |.constdata|, DATA, READONLY
 ;;==============================constant area definition end=================================;; 
+
+
+
+
+
+;;==================================kernel config starting===================================;; 
+DEF_GPIO_TICK_DEBUG   EQU        0x00000000                        ;enable/disable gpio toggle
+;;====================================kernel config end======================================;;
 
 
 
@@ -227,22 +235,20 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 
 ;;===========================macro for gpio init starting====================================;; 
                       MACRO                                        ;macro start
-					  MACRO_GPIO_INIT                              ;macro name
-					  
+					  MACRO_GPIO_INIT  $ML                         ;macro name
+					  ;if debug disabled, skip
+					  MOVS       R0,   #DEF_GPIO_TICK_DEBUG        ;load device config
+					  BEQ        $ML.EXIT                          ;jump to exit
 					  ;enable clock from rcc
                       LDR        R0,   =DEF_RCC_IOPENR             ;load IOPENR address
 					  LDR        R1,   [R0]                        ;load IOPENR val
 					  MOVS       R2,   #0x01                       ;mask bit0
 	                  ORRS       R1,   R1, R2                      ;set bit 0
 					  STR        R1,   [R0]                        ;store val to IOPENR
-					  
 					  ;set ODR pin low
-					  LDR        R0,   =DEF_GPIOA_ODR              ;load ODR address
-					  LDR        R1,   [R0]                        ;load ODR val
-					  LDR        R2,   =0xFFF0                     ;bit0-bit3 clear
-					  ANDS       R1,   R1, R2                      ;set bit of the pins
-					  STR        R1,   [R0]                        ;store val to ODR
-					  
+					  LDR        R0,   =DEF_GPIOA_BSRR             ;load BSRR address
+					  LDR        R1,   =0x00010000                 ;bit0 clear
+					  STR        R1,   [R0]                        ;store val
 					  ;set pin as general purpose i/o
 					  LDR        R0,   =DEF_GPIOA_MODER            ;load MODER address
 					  LDR        R1,   [R0]                        ;load MODER val
@@ -251,6 +257,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  LDR        R2,   =0x00000055                 ;to output mode
 					  ORRS       R1,   R1, R2                      ;set output mode
 					  STR        R1,   [R0]                        ;store val GPIOA
+$ML.EXIT
                       MEND                                         ;macro end
 ;;==============================macro for gpio init end======================================;; 
 
@@ -260,10 +267,14 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 
 ;;===========================macro for gpio set starting=====================================;; 
                       MACRO                                        ;macro start
-					  MACRO_GPIO_SET                               ;macro name
-					  LDR        R0,   =0x50000018                 ;load BSRR address
+					  MACRO_GPIO_SET   $ML                         ;macro name
+					  ;if debug disabled, skip
+					  MOVS       R0,   #DEF_GPIO_TICK_DEBUG        ;load device config
+					  BEQ        $ML.EXIT                          ;jump to exit
+					  LDR        R0,   =DEF_GPIOA_BSRR             ;load BSRR address
 					  MOVS       R1,   #0x01                       ;bit0 set
 					  STR        R1,   [R0]                        ;store val
+$ML.EXIT
                       MEND                                         ;macro end
 ;;=============================macro for gpio set end========================================;; 
 
@@ -273,12 +284,35 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 
 ;;===========================macro for gpio clear starting===================================;; 
 					  MACRO                                        ;macro start
-                      MACRO_GPIO_CLEAR                             ;macro name
-					  LDR        R0,   =0x50000018                 ;load BSRR address
+                      MACRO_GPIO_CLEAR $ML                         ;macro name
+					  ;if debug disabled, skip
+					  MOVS       R0,   #DEF_GPIO_TICK_DEBUG        ;load device config
+					  BEQ        $ML.EXIT                          ;jump to exit
+					  LDR        R0,   =DEF_GPIOA_BSRR             ;load BSRR address
 					  LDR        R1,   =0x00010000                 ;bit0 clear
 					  STR        R1,   [R0]                        ;store val
+$ML.EXIT
 					  MEND                                         ;macro end
 ;;=============================macro for gpio clear end======================================;; 
+
+
+
+
+
+;;===========================macro for systick config starting===============================;; 
+					  MACRO                                        ;macro start
+                      MACRO_SYSTICK_CONFIG                         ;macro name
+                      LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
+					  LDR        R1,   =15999                      ;load val for 1ms
+					  STR        R1,   [R0]                        ;set val to reg
+					  LDR        R0,   =DEF_STK_VAL                ;load stk_val reg address
+					  MOVS       R1,   #0x00                       ;clear reg
+					  STR        R1,   [R0]                        ;clear stk_val reg
+					  LDR        R0,   =DEF_STK_CTRL               ;load stk_ctrl reg address
+					  MOVS       R1,   #0x07                       ;mask bit0, bit1 & bit2
+					  STR        R1,   [R0]                        ;set val to stk_ctrl
+					  MEND                                         ;macro end
+;;=============================macro for systick config end==================================;; 
 
 
 
@@ -425,34 +459,34 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 
 ;;=======================macro for sleep time management starting============================;; 
 					  MACRO                                        ;macro start
-        		      MACRO_KER_SLP_TIME_MGNT $MLA                 ;macro name, local label
+        		      MACRO_KER_SLP_TIME_MGNT $ML                  ;macro name, local label
 					  MACRO_OFFSET_CALC                            ;calculate offset, ret R0
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
 					  LDR        R2,   [R1]                        ;load sleep duration
 					  CMP        R2,   #0x00                       ;compare with 0
-					  BEQ        $MLA.TREADY                       ;jmp to label
+					  BEQ        $ML.TREADY                        ;jmp to label
 					  
 					  ;check if yield flag(R1 is sleep val addr, R2 is curr sleep val)
 					  LDR        R3,   =KER_TASK_YIELD             ;load yield flag addr
 					  LDR        R3,   [R3]                        ;load yield flag val
 					  TST        R3,   R3                          ;test val
-					  BNE        $MLA.TBLOCKED                     ;if !=0, skip decrement
-$MLA.SLPDEC                                                        ;sleep time decrement
+					  BNE        $ML.TBLOCKED                      ;if !=0, skip decrement
+$ML.SLPDEC                                                         ;sleep time decrement
 					  SUBS       R2,   R2, #0x01                   ;decrease by 1
 					  STR        R2,   [R1]                        ;store new val
 					  CMP        R2,   #0x00                       ;compare with 0
-					  BEQ        $MLA.TREADY                       ;jmp to label
-$MLA.TBLOCKED                                                      ;label->task blocked
+					  BEQ        $ML.TREADY                        ;jmp to label
+$ML.TBLOCKED                                                       ;label->task blocked
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
-					  B          $MLA.UPDSTS                       ;jmp to label
-$MLA.TREADY                                                        ;label->task ready
+					  B          $ML.UPDSTS                        ;jmp to label
+$ML.TREADY                                                         ;label->task ready
 					  LDR        R1,   =TASK_READY                 ;set status ready
-$MLA.UPDSTS                                                        ;label->update status
+$ML.UPDSTS                                                         ;label->update status
 					  LDR        R2,   =KER_TASK_STS               ;load status base addr
 					  ADDS       R2,   R2, R0                      ;base+offset
 					  STR        R1,   [R2]                        ;store status
-$MLA.EXIT
+$ML.EXIT
                       MEND                                         ;macro end
 ;;=========================macro for sleep time management end===============================;; 
 
@@ -462,7 +496,7 @@ $MLA.EXIT
 
 ;;============================macro for scheduler starting===================================;; 
 					  MACRO                                        ;macro start
-            		  MACRO_KER_RUN_SCHEDULER $MLA, $MLB           ;macro name, local label
+            		  MACRO_KER_RUN_SCHEDULER $ML1, $ML2           ;macro name, local label
 					  
 					  ;init values before loop entry
 					  MOVS       R0,   #0xFF                       ;set val
@@ -475,8 +509,8 @@ $MLA.EXIT
 					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  STR        R0,   [R1]                        ;store task_id
 					  
-$MLB.LP_STRT                                                       ;label-> loop start
-					  MACRO_KER_SLP_TIME_MGNT $MLA                 ;time mangement
+$ML2.LP_STRT                                                       ;label-> loop start
+					  MACRO_KER_SLP_TIME_MGNT $ML1                 ;time mangement
 					  
 					  ;calculate offset R0, load status 
 					  LDR        R1,   =KER_TASK_STS               ;load status base addr
@@ -486,7 +520,7 @@ $MLB.LP_STRT                                                       ;label-> loop
 					  ;check if task ready
 					  LDR        R2,   =TASK_READY                 ;load ready status
 					  CMP        R1,   R2                          ;compare
-					  BNE        $MLB.BL_OR_LP                     ;jmp to label (blocked)
+					  BNE        $ML2.BL_OR_LP                     ;jmp to label (blocked)
 					  
 					  ;task is ready
 					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
@@ -497,7 +531,7 @@ $MLB.LP_STRT                                                       ;label-> loop
 					  
 					  ;check current priority >= highest priority (lower val is higher priority)
 					  CMP        R3,   R2                          ;compare 
-					  BHS        $MLB.BL_OR_LP                     ;jmp to label (low prio)
+					  BHS        $ML2.BL_OR_LP                     ;jmp to label (low prio)
 					  
 					  ;new high prio found
 					  STR        R3,   [R1]                        ;store new hi-prio
@@ -505,22 +539,22 @@ $MLB.LP_STRT                                                       ;label-> loop
 					  LDR        R0,   [R0]                        ;load task_id val
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio task_id addr
 					  STR        R0,   [R1]                        ;store prio task_id
-$MLB.BL_OR_LP                                                      ;label->blocked or low priority
+$ML2.BL_OR_LP                                                      ;label->blocked or low priority
                       LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id val
 					  ADDS       R1,   R1, #1                      ;increment
 					  LDR        R2,   =KER_NTASK                  ;load ntask addr
 					  LDR        R2,   [R2]                        ;load ntask val
                       CMP        R1,   R2                          ;compare
-					  BHS        $MLB.LP_END                       ;task_id>=ntask
+					  BHS        $ML2.LP_END                       ;task_id>=ntask
 					  STR        R1,   [R0]                        ;store new task_id
-					  B          $MLB.LP_STRT                      ;loop start
-$MLB.LP_END                                                        ;loop complete
+					  B          $ML2.LP_STRT                      ;loop start
+$ML2.LP_END                                                        ;loop complete
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
 					  LDR        R1,   [R1]                        ;load prio tid val
 					  STR        R1,   [R0]                        ;store new prio tid
-$MLB.EXIT
+$ML2.EXIT
                       MEND                                         ;macro end
 ;;================================macro for scheduler end====================================;; 
 
@@ -530,20 +564,20 @@ $MLB.EXIT
 
 ;;==========================macro for sub-seconds counter starting===========================;; 
 					  MACRO                                        ;macro start
-					  MACRO_SS_CNT     $MLC                        ;macro name
+					  MACRO_SS_CNT     $ML                         ;macro name
 					  LDR        R0,   =KER_TASK_YIELD             ;load yield flag addr
 					  LDR        R1,   [R0]                        ;load yield flag val
 					  TST        R1,   R1                          ;test val
-					  BNE        $MLC.EXIT                         ;jmp to label
+					  BNE        $ML.EXIT                          ;jmp to label
 					  LDR        R0,   =KER_TICK_SS                ;load tick_ss base addr
 					  LDR        R1,   [R0]                        ;load systick ss LSW val
 					  ADDS       R1,   R1,  #1                     ;increment val
 					  STR        R1,   [R0]                        ;store val
-					  BNE        $MLC.EXIT                         ;jmp to label
+					  BNE        $ML.EXIT                          ;jmp to label
 					  LDR        R1,   [R0, #4]                    ;load systick ss HSW val
 					  ADDS       R1,   R1,  #1                     ;increment val
 					  STR        R1,   [R0, #4]                    ;store val
-$MLC.EXIT
+$ML.EXIT
                       MEND                                         ;macro end
 ;;============================macro for sub-seconds counter end==============================;; 
 
@@ -553,25 +587,25 @@ $MLC.EXIT
 
 ;;============================macro for seconds counter starting=============================;; 
 					  MACRO                                        ;macro start
-					  MACRO_S_CNT      $MLD                        ;macro name
+					  MACRO_S_CNT      $ML                         ;macro name
 					  LDR        R0,   =KER_TASK_YIELD             ;load yield flag addr
 					  LDR        R1,   [R0]                        ;load yield flag val
 					  TST        R1,   R1                          ;test val
-					  BNE        $MLD.EXIT                         ;jmp to label
+					  BNE        $ML.EXIT                          ;jmp to label
 					  LDR        R0,   =KER_TICK_S_CNT             ;load tick_s_cnt addr
 					  LDR        R1,   [R0]                        ;load systick ss LSW val
 					  ADDS       R1,   R1,  #1                     ;increment val
 					  LDR        R2,   =1000                       ;compare with 1000ms
 					  CMP        R1,   R2                          ;compare with val
-					  BLO        $MLD.SAVE_TICK                    ;no need to inc sec
+					  BLO        $ML.SAVE_TICK                     ;no need to inc sec
 					  LDR        R1,   =0x00000000                 ;clear counter
 					  LDR        R2,   =KER_TICK_S                 ;load tick_s addr
 					  LDR        R3,   [R2]                        ;load tick_s val
 					  ADDS       R3,   R3,  #1                     ;increment val
 					  STR        R3,   [R2]                        ;store tick_s val
-$MLD.SAVE_TICK
+$ML.SAVE_TICK
                       STR        R1,   [R0]                        ;store tick_s_cnt val
-$MLD.EXIT
+$ML.EXIT
                       MEND                                         ;macro end
 ;;==============================macro for seconds counter end================================;; 
 
@@ -581,34 +615,34 @@ $MLD.EXIT
 
 ;;========================macro for cpu usage calculation starting===========================;; 
 					  MACRO                                        ;macro start
-					  MACRO_CPU_USAGE  $MLE                        ;macro name
+					  MACRO_CPU_USAGE  $ML                         ;macro name
 					  LDR        R0,   =KER_TASK_YIELD             ;load yield flag addr
 					  LDR        R1,   [R0]                        ;load yield flag val
 					  TST        R1,   R1                          ;test val
-					  BNE        $MLE.EXIT                         ;jmp to label
+					  BNE        $ML.EXIT                          ;jmp to label
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R0]                        ;load task_id
 					  LDR        R2,   =KER_ACTV_TICK_CNT          ;load active_tick_cnt addr
 					  LDR        R0,   [R2]                        ;load active_tick_cnt
 					  TST        R1,   R1                          ;check val
-					  BEQ        $MLE.SKIP_INC                     ;if task = idle task, skip
+					  BEQ        $ML.SKIP_INC                      ;if task = idle task, skip
 					  ADDS       R0,   R0,  #1                     ;increment val
 					  STR        R0,   [R2]                        ;store val, R0 active_tick_cnt
-$MLE.SKIP_INC                                                      ;label->no increment
+$ML.SKIP_INC                                                       ;label->no increment
 					  LDR        R1,   =KER_CMP_TICK_CNT           ;load cmp_tick_cnt addr
 					  LDR        R2,   [R1]                        ;load cmp_tick_cnt val
 					  ADDS       R2,   R2,  #1                     ;increment val
 					  LDR        R3,   =1000                       ;load compare val
 					  CMP        R2,   R3                          ;compare values
-					  BLO        $MLE.SKIP_WRAP                    ;jmp to label
+					  BLO        $ML.SKIP_WRAP                     ;jmp to label
 					  LDR        R3,   =KER_CPU_USAGE              ;load cpu_usage addr
 					  STR        R0,   [R3]                        ;store
 					  MOVS       R2,   #0x00                       ;set val to 0
 					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load cmp_tick_cnt addr
 					  STR        R2,   [R0]                        ;store
-$MLE.SKIP_WRAP                                                     ;label->no wrapping
+$ML.SKIP_WRAP                                                      ;label->no wrapping
 					  STR        R2,   [R1]                        ;store new val
-$MLE.EXIT                                                          ;label->exit
+$ML.EXIT                                                           ;label->exit
                       MEND                                         ;macro end
 ;;===========================macro for cpu usage calculation end=============================;; 
 
@@ -618,11 +652,11 @@ $MLE.EXIT                                                          ;label->exit
 
 ;;===========================macro for clear yield flag starting=============================;; 
 					  MACRO                                        ;macro start
-					  MACRO_CLEAR_YIELD_FLAG     $MLF              ;macro name
+					  MACRO_CLEAR_YIELD_FLAG     $ML               ;macro name
 					  LDR        R0,   =KER_TASK_YIELD             ;load yield flag addr
 					  MOVS       R1,   #0x00                       ;clear yield flag
 					  STR        R1,   [R0]                        ;store val
-$MLF.EXIT
+$ML.EXIT
                       MEND                                         ;macro end
 ;;=============================macro for clear yield flag end================================;; 
 
@@ -644,7 +678,7 @@ Kernel_Idle_Task
 Kernel_Init
                       PUSH       {LR}
 					  
-					  ;MACRO_GPIO_INIT                              ;gpio init for debug
+					  MACRO_GPIO_INIT      PLBL1                   ;gpio init for debug
 					  MACRO_SYS_VAR_INIT                           ;system variable init
 					  
 					  ;set PendSV as lowest priority interrupt
@@ -744,21 +778,11 @@ Kernel_Task_Create
 ;;=================================start tasks starting======================================;; 
 Kernel_Start_Tasks
                       ;configure SysTick timer
-                      LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
-					  LDR        R1,   =15999                      ;load val for 1ms
-					  STR        R1,   [R0]                        ;set val to reg
-					  LDR        R0,   =DEF_STK_VAL                ;load stk_val reg address
-					  MOVS       R1,   #0x00                       ;clear reg
-					  STR        R1,   [R0]                        ;clear stk_val reg
-					  LDR        R0,   =DEF_STK_CTRL               ;load stk_ctrl reg address
-					  MOVS       R1,   #0x07                       ;mask bit0, bit1 & bit2
-					  STR        R1,   [R0]                        ;set val to stk_ctrl
-					  
+                      MACRO_SYSTICK_CONFIG                         ;configure systick
 					  ;calculate stack top for this task
 					  LDR        R0,   =DEF_KER_STACK_SIZE         ;load each stack size
 					  LDR        R1,   =KER_TASK_STACK             ;PSP start base
 					  ADDS       R0,   R0, R1                      ;add offset
-					  
 					  ;Setup PSP for main
                       MSR        PSP,  R0                          ;set PSP
                       MRS        R1,   CONTROL
@@ -791,17 +815,17 @@ PendSV_Handler
                       ;Hardware pushed (address wise, high->low) xPSR,PC,LR,R12,R3-R0
 					  ;Software pushed (address wise, high->low) R11-R4
                       CPSID      I                                 ;disable interrupts
-					  ;MACRO_GPIO_SET                               ;debug pin set
+					  MACRO_GPIO_SET          ISRLBL1              ;debug pin set
 					  MACRO_CONTEXT_SAVE                           ;save context
-					  MACRO_KER_RUN_SCHEDULER ISRLBL1, ISRLBL2     ;run scheduler, local label
+					  MACRO_KER_RUN_SCHEDULER ISRLBL2, ISRLBL3     ;run scheduler, local label
 					  
-					  MACRO_SS_CNT            ISRLBL3              ;sub-seconds counter
-					  MACRO_S_CNT             ISRLBL4              ;seconds counter
-					  MACRO_CPU_USAGE         ISRLBL5              ;calculate cpu usage
+					  MACRO_SS_CNT            ISRLBL4              ;sub-seconds counter
+					  MACRO_S_CNT             ISRLBL5              ;seconds counter
+					  MACRO_CPU_USAGE         ISRLBL6              ;calculate cpu usage
 					  
-					  MACRO_CLEAR_YIELD_FLAG  ISRLBL6              ;clear yield flag
+					  MACRO_CLEAR_YIELD_FLAG  ISRLBL7              ;clear yield flag
 					  MACRO_CONTEXT_RESTORE                        ;restore context
-					  ;MACRO_GPIO_CLEAR                             ;debug pin clear
+					  MACRO_GPIO_CLEAR        ISRLBL8              ;debug pin clear
 					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return from interrupt
 ;;================================pending service isr end====================================;; 

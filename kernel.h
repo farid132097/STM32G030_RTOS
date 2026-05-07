@@ -1,13 +1,12 @@
 
-/*
 
+/*
    File          : kernel.h
    Author        : MD. Faridul Islam (faridmdislam@gmail.com)
 	 Source        : https://github.com/farid132097/STM32G030_RTOS
    Description   : ARM Cortex M0+ kernel for bare-metal RTOS
    Created       : Sep 02, 2025, 09:30 PM
-   Last Modified : May 07, 2026, 02:48 PM
-	
+   Last Modified : May 07, 2026, 05:33 PM
 */
 
 
