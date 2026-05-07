@@ -6,7 +6,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 06, 2026, 02:29 PM
+ ; Last Modified : May 07, 2026, 11:01 AM
 
 
 
@@ -159,6 +159,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 					  EXPORT     KER_TASK_SLEEP
 					  EXPORT     KER_TASK_YIELD
 					  EXPORT     KER_TASK_STS
+					  EXPORT     KER_TASK_TOUT
 ;;===========================global variable declaration end=================================;; 
 
 
@@ -183,6 +184,7 @@ KER_TASK_PRIO_TID     SPACE      4                                 ;highest prio
 KER_TASK_SLEEP        SPACE      4*DEF_KER_MAX_NTASK               ;task sleep duration
 KER_TASK_YIELD        SPACE      4                                 ;task yield status
 KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
+KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeout timestamps
 ;;=============================global variable definition end================================;; 
 
 
@@ -206,6 +208,8 @@ KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
 					  EXPORT     Kernel_Tick_SS32_Get
 					  EXPORT     Kernel_Tick_SS64_Get
 					  EXPORT     Kernel_Tick_S_Get
+					  EXPORT     Kernel_Timeout_Set
+					  EXPORT     Kernel_Is_Timeout
 				      EXPORT     Kernel_CPU_Usage_Get
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
@@ -676,7 +680,7 @@ Kernel_Init
 					  
 					  LDR        R0,   =Kernel_Idle_Task           ;load idle task addr
 					  LDR        R1,   =0xFF                       ;lowest priority
-					  BL         Kernel_Task_Create
+					  BL         Kernel_Task_Create                ;create idle task
 					  
 					  POP        {PC}
 ;;====================================demo task3 end=========================================;; 
@@ -839,7 +843,7 @@ Kernel_Task_Sleep
 					  ;find offset (R0 arg)
                       LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R1,   [R1]                        ;load task_id val
-					  LSLS       R1,   R1,  #2                     ;left shift 2 times to x4
+					  LSLS       R1,   R1, #2                      ;left shift 2 times to x4
 					  
 					  ;set sleep val (R0 arg, R1 offset)
 					  LDR        R2,   =KER_TASK_SLEEP             ;load sleep base addr
@@ -884,16 +888,11 @@ Kernel_Tick_SS32_Get
 
 ;;==========================kernel tick 64bit SS val get starting============================;;   
 Kernel_Tick_SS64_Get
+                      CPSID      I                                 ;disable interrupts
 					  LDR        R0,   =KER_TICK_SS                ;load sub-seconds addr
 					  LDR        R1,   [R0, #4]                    ;load HW sub-seconds val
 					  LDR        R0,   [R0]                        ;load LW sub-seconds val
-					  LDR        R2,   =KER_TICK_SS                ;load sub-seconds addr
-					  LDR        R3,   [R2, #4]                    ;load HW sub-seconds val
-					  LDR        R2,   [R2]                        ;load LW sub-seconds val
-					  CMP        R0,   R2                          ;compare Low Words
-					  BNE        Kernel_Tick_SS64_Get              ;if not same, start again
-					  CMP        R1,   R3                          ;compare Low Words
-					  BNE        Kernel_Tick_SS64_Get              ;if not same, start again
+					  CPSIE      I                                 ;enable interrupt
 					  BX         LR                                ;return
 ;;============================kernel tick 64bit SS val get end===============================;; 
 
@@ -907,6 +906,57 @@ Kernel_Tick_S_Get
 					  LDR        R0,   [R0]                        ;load seconds val
 					  BX         LR                                ;return
 ;;============================kernel tick seconds val get end================================;; 
+
+
+
+
+
+;;==============================kernel timeout set starting==================================;; 
+Kernel_Timeout_Set
+                      PUSH       {LR}
+					  MOV        R3,   R0                          ;copy reg
+                      LDR        R0,   =KER_TASK_TOUT              ;load timeout addr
+					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   [R1]                        ;load task_id val
+					  LSLS       R1,   R1, #3                      ;multiply by 8
+					  ADDS       R2,   R0, R1                      ;offset addr of timeout
+					  BL         Kernel_Tick_SS64_Get              ;get 64bit timestamp
+					  ADDS       R0,   R0, R3                      ;low word + timeout
+					  MOVS       R3,   #0                          ;load 0
+					  ADCS       R1,   R1, R3                      ;add carry with high word 
+					  STR        R0,   [R2]                        ;store low word
+					  STR        R1,   [R2, #4]                    ;store high word
+					  POP        {PC}                              ;return
+;;=================================kernel timeout set end====================================;; 
+
+
+
+
+
+;;==============================kernel timeout set starting==================================;; 
+Kernel_Is_Timeout 
+                      PUSH       {LR}                              ;save return addr
+                      LDR        R0,   =KER_TASK_TOUT              ;load timeout addr
+					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
+					  LDR        R1,   [R1]                        ;load task_id val
+					  LSLS       R1,   R1, #3                      ;multiply by 8
+					  ADDS       R2,   R0, R1                      ;offset addr of timeout
+					  LDR        R3,   [R2, #4]                    ;load high word
+					  LDR        R2,   [R2]                        ;load low word
+					  BL         Kernel_Tick_SS64_Get              ;get 64bit timestamp
+					  CMP        R1,   R3                          ;compare high words
+					  BHI        KER_IS_TOUT_TRUE                  ;jump to true
+					  BLO        KER_IS_TOUT_FALSE                 ;jump to false
+					  CMP        R0,   R2                          ;compare low words
+					  BHI        KER_IS_TOUT_TRUE                  ;jump to true
+KER_IS_TOUT_FALSE
+					  MOVS       R0,   #0                          ;load 0
+					  B          KER_IS_TOUT_EXIT                  ;jump to exit
+KER_IS_TOUT_TRUE
+                      MOVS       R0,   #1                          ;load 0
+KER_IS_TOUT_EXIT
+                      POP        {PC}                                ;return
+;;=================================kernel timeout set end====================================;; 
 
 
 
