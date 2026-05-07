@@ -1,19 +1,20 @@
  
  
+ 
  ; File          : kernel.s
  ; Author        : MD. Faridul Islam (faridmdislam@gmail.com)
  ; Source        : https://github.com/farid132097/STM32G030_RTOS
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 07, 2026, 11:01 AM
+ ; Last Modified : May 07, 2026, 02:48 PM
 
 
 
 
 ;;=============================system type definition starting===============================;; 
-                      THUMB                                      ;enable thumb mode
-				      PRESERVE8                                  ;8 bytes stack alignment
+                      THUMB                                        ;enable thumb mode
+				      PRESERVE8                                    ;8 bytes stack alignment
 ;;===============================system type definition end==================================;; 
 
 
@@ -29,19 +30,12 @@
 
 
 ;;===============================define address bases starting===============================;; 
-DEF_CODE_BASE         EQU        0x00000000
-DEF_SRAM_BASE         EQU        0x20000000
-EDF_SRAMM_END         EQU        0x20001FFF
 DEF_PERIPHERAL_BASE   EQU        0x40000000
-DEF_APB1_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00000000
-DEF_APB2_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00010000
 DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
 DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000
 DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000
 DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000
-DEF_FLASH_BASE        EQU        DEF_CODE_BASE       + 0x00000000
 DEF_SCS_BASE          EQU        0xE000E010
-DEF_NVIC_BASE         EQU        0xE000E100
 DEF_SCB_BASE          EQU        0xE000ED00
 ;;=================================define address bases end==================================;; 
 
@@ -55,25 +49,6 @@ DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004
 DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
 DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 ;;===============================define systick addresses end================================;;
-
-
-
-
-
-;;==============================define NVIC addresses starting===============================;; 
-DEF_NVIC_ISER         EQU        DEF_NVIC_BASE       + 0x00000000
-DEF_NVIC_ICER         EQU        DEF_NVIC_BASE       + 0x00000080
-DEF_NVIC_ISPR         EQU        DEF_NVIC_BASE       + 0x00000100
-DEF_NVIC_ICPR         EQU        DEF_NVIC_BASE       + 0x00000180
-DEF_NVIC_IPR0         EQU        DEF_NVIC_BASE       + 0x00000300
-DEF_NVIC_IPR1         EQU        DEF_NVIC_BASE       + 0x00000320
-DEF_NVIC_IPR2         EQU        DEF_NVIC_BASE       + 0x00000340
-DEF_NVIC_IPR3         EQU        DEF_NVIC_BASE       + 0x00000360
-DEF_NVIC_IPR4         EQU        DEF_NVIC_BASE       + 0x00000380
-DEF_NVIC_IPR5         EQU        DEF_NVIC_BASE       + 0x000003A0
-DEF_NVIC_IPR6         EQU        DEF_NVIC_BASE       + 0x000003C0
-DEF_NVIC_IPR7         EQU        DEF_NVIC_BASE       + 0x000003E0
-;;=================================define NVIC addresses end=================================;;
 
 
 
@@ -103,7 +78,6 @@ DEF_GPIOD_BASE        EQU        DEF_GPIO_BASE       + 0x00000C00
 DEF_GPIOE_BASE        EQU        DEF_GPIO_BASE       + 0x00001000
 DEF_GPIOF_BASE        EQU        DEF_GPIO_BASE       + 0x00001400
 DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000
-DEF_GPIOA_ODR         EQU        DEF_GPIOA_BASE      + 0x00000014
 DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
 ;;=============================define GPIO related addresses end=============================;; 
 
@@ -223,7 +197,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
                       MACRO                                        ;macro start
 					  MACRO_SYS_VAR_INIT                           ;macro name
                       LDR        R0,   =KER_TICK_SS                ;load tick_ss addr
-					  LDR        R1,   =0x00000000                 ;set val 0
+					  MOVS       R1,   #0x00                       ;set val 0
 					  STR        R1,   [R0]                        ;store tick_ssL val
 					  STR        R1,   [R0,  #4]                   ;store tick_ssH val
 					  LDR        R0,   =KER_TICK_S                 ;load tick_s addr
@@ -258,7 +232,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  ;enable clock from rcc
                       LDR        R0,   =DEF_RCC_IOPENR             ;load IOPENR address
 					  LDR        R1,   [R0]                        ;load IOPENR val
-					  LDR        R2,   =0x00000001                 ;mask bit0
+					  MOVS       R2,   #0x01                       ;mask bit0
 	                  ORRS       R1,   R1, R2                      ;set bit 0
 					  STR        R1,   [R0]                        ;store val to IOPENR
 					  
@@ -288,7 +262,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
                       MACRO                                        ;macro start
 					  MACRO_GPIO_SET                               ;macro name
 					  LDR        R0,   =0x50000018                 ;load BSRR address
-					  LDR        R1,   =0x00000001                 ;bit0 set
+					  MOVS       R1,   #0x01                       ;bit0 set
 					  STR        R1,   [R0]                        ;store val
                       MEND                                         ;macro end
 ;;=============================macro for gpio set end========================================;; 
@@ -389,7 +363,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  MACRO_OFFSET_CALC                            ;macro name
 					  LDR        R0,   =KER_TASK_ID                ;load task_id addr
 					  LDR        R0,   [R0]                        ;load task_id val
-					  LSLS       R0,   R0,  #2                     ;left shift 2 times to x4
+					  LSLS       R0,   R0,  #0x02                  ;left shift 2 times to x4
                       MEND                                         ;macro end
 ;;===================================macro for offset end====================================;; 
 
@@ -456,7 +430,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  LDR        R1,   =KER_TASK_SLEEP             ;load sleep addr
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
 					  LDR        R2,   [R1]                        ;load sleep duration
-					  CMP        R2,   #0                          ;compare with 0
+					  CMP        R2,   #0x00                       ;compare with 0
 					  BEQ        $MLA.TREADY                       ;jmp to label
 					  
 					  ;check if yield flag(R1 is sleep val addr, R2 is curr sleep val)
@@ -465,9 +439,9 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  TST        R3,   R3                          ;test val
 					  BNE        $MLA.TBLOCKED                     ;if !=0, skip decrement
 $MLA.SLPDEC                                                        ;sleep time decrement
-					  SUBS       R2,   R2, #1                      ;decrease by 1
+					  SUBS       R2,   R2, #0x01                   ;decrease by 1
 					  STR        R2,   [R1]                        ;store new val
-					  CMP        R2,   #0                          ;compare with 0
+					  CMP        R2,   #0x00                       ;compare with 0
 					  BEQ        $MLA.TREADY                       ;jmp to label
 $MLA.TBLOCKED                                                      ;label->task blocked
 					  LDR        R1,   =TASK_BLOCKED               ;set status blocked
@@ -491,13 +465,13 @@ $MLA.EXIT
             		  MACRO_KER_RUN_SCHEDULER $MLA, $MLB           ;macro name, local label
 					  
 					  ;init values before loop entry
-					  LDR        R0,   =0xFF                       ;set val
+					  MOVS       R0,   #0xFF                       ;set val
 					  LDR        R1,   =KER_TASK_HI_PRIO           ;load hi-prio addr
 					  STR        R0,   [R1]                        ;store lowest priority
-					  LDR        R0,   =0                          ;set val
+					  MOVS       R0,   #0x00                       ;set val
 					  LDR        R1,   =KER_TASK_PRIO_TID          ;load prio tid addr
 					  STR        R0,   [R1]                        ;store prio tid
-					  LDR        R0,   =0                          ;set val
+					  MOVS       R0,   #0x00                       ;set val
 					  LDR        R1,   =KER_TASK_ID                ;load task_id addr
 					  STR        R0,   [R1]                        ;store task_id
 					  
@@ -629,7 +603,7 @@ $MLE.SKIP_INC                                                      ;label->no in
 					  BLO        $MLE.SKIP_WRAP                    ;jmp to label
 					  LDR        R3,   =KER_CPU_USAGE              ;load cpu_usage addr
 					  STR        R0,   [R3]                        ;store
-					  LDR        R2,   =0x00000000                 ;set val to 0
+					  MOVS       R2,   #0x00                       ;set val to 0
 					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load cmp_tick_cnt addr
 					  STR        R2,   [R0]                        ;store
 $MLE.SKIP_WRAP                                                     ;label->no wrapping
@@ -646,7 +620,7 @@ $MLE.EXIT                                                          ;label->exit
 					  MACRO                                        ;macro start
 					  MACRO_CLEAR_YIELD_FLAG     $MLF              ;macro name
 					  LDR        R0,   =KER_TASK_YIELD             ;load yield flag addr
-					  LDR        R1,   =0x00000000                 ;clear yield flag
+					  MOVS       R1,   #0x00                       ;clear yield flag
 					  STR        R1,   [R0]                        ;store val
 $MLF.EXIT
                       MEND                                         ;macro end
@@ -679,7 +653,7 @@ Kernel_Init
 					  STR        R1,   [R0]                        ;store val
 					  
 					  LDR        R0,   =Kernel_Idle_Task           ;load idle task addr
-					  LDR        R1,   =0xFF                       ;lowest priority
+					  MOVS       R1,   #0xFF                       ;lowest priority
 					  BL         Kernel_Task_Create                ;create idle task
 					  
 					  POP        {PC}
@@ -703,7 +677,7 @@ Kernel_Task_Create
 					  ;create space for stack frame (R0:R1 arg, R2 stack top)
                       SUBS       R2,   #32                         ;space for R4-R11
                       SUBS       R2,   #32                         ;space for hardware frame
-                      MOVS       R3,   #0                          ;clear reg
+                      MOVS       R3,   #0x00                       ;clear reg
 					  
 					  ;create software stack (R0:R1 arg, R2 stack top, R3 for clearing)
 					  STR        R3,   [R2, #0]                    ;R4
@@ -744,7 +718,7 @@ Kernel_Task_Create
 					  
 					  ;store sleep (R0 offset)
 					  LDR        R1,   =KER_TASK_SLEEP             ;sleep base
-					  LDR        R2,   =0                          ;set sleep duration 0
+					  MOVS       R2,   #0x00                       ;set sleep duration 0
 					  ADDS       R1,   R1, R0                      ;sleep base+offset
 					  STR        R2,   [R1]                        ;save sleep duration
 					  
@@ -774,10 +748,10 @@ Kernel_Start_Tasks
 					  LDR        R1,   =15999                      ;load val for 1ms
 					  STR        R1,   [R0]                        ;set val to reg
 					  LDR        R0,   =DEF_STK_VAL                ;load stk_val reg address
-					  MOVS       R1,   #0                          ;clear reg
+					  MOVS       R1,   #0x00                       ;clear reg
 					  STR        R1,   [R0]                        ;clear stk_val reg
 					  LDR        R0,   =DEF_STK_CTRL               ;load stk_ctrl reg address
-					  MOVS       R1,   #7                          ;mask bit0, bit1 & bit2
+					  MOVS       R1,   #0x07                       ;mask bit0, bit1 & bit2
 					  STR        R1,   [R0]                        ;set val to stk_ctrl
 					  
 					  ;calculate stack top for this task
@@ -788,7 +762,7 @@ Kernel_Start_Tasks
 					  ;Setup PSP for main
                       MSR        PSP,  R0                          ;set PSP
                       MRS        R1,   CONTROL
-					  LDR        R2,   =0x02
+					  MOVS       R2,   #0x02
                       ORRS       R1,   R1, R2                      ;CONTROL.SPSEL = 1
                       MSR        CONTROL, R1                       ;switch to PSP
                       ISB                                          ;instruction barrier
@@ -858,7 +832,7 @@ Kernel_Task_Sleep
 					  
 					  ;set task yield flag
                       LDR        R0,   =KER_TASK_YIELD             ;load ntask addr
-					  LDR        R1,   =0x00000001                 ;set flag
+					  MOVS       R1,   #0x01                       ;set flag
 					  STR        R1,   [R0]                        ;store val
 					  
 					  LDR        R0,   =DEF_SCB_ICSR               ;load SCB->ICSR addr
@@ -922,7 +896,7 @@ Kernel_Timeout_Set
 					  ADDS       R2,   R0, R1                      ;offset addr of timeout
 					  BL         Kernel_Tick_SS64_Get              ;get 64bit timestamp
 					  ADDS       R0,   R0, R3                      ;low word + timeout
-					  MOVS       R3,   #0                          ;load 0
+					  MOVS       R3,   #0x00                       ;load 0x00
 					  ADCS       R1,   R1, R3                      ;add carry with high word 
 					  STR        R0,   [R2]                        ;store low word
 					  STR        R1,   [R2, #4]                    ;store high word
@@ -950,10 +924,10 @@ Kernel_Is_Timeout
 					  CMP        R0,   R2                          ;compare low words
 					  BHI        KER_IS_TOUT_TRUE                  ;jump to true
 KER_IS_TOUT_FALSE
-					  MOVS       R0,   #0                          ;load 0
+					  MOVS       R0,   #0x00                       ;load 0
 					  B          KER_IS_TOUT_EXIT                  ;jump to exit
 KER_IS_TOUT_TRUE
-                      MOVS       R0,   #1                          ;load 0
+                      MOVS       R0,   #0x01                       ;load 0
 KER_IS_TOUT_EXIT
                       POP        {PC}                                ;return
 ;;=================================kernel timeout set end====================================;; 

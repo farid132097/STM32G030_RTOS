@@ -1,19 +1,25 @@
 
 /*
 
-  File          : kernel.h
-  Author        : MD. Faridul Islam (faridmdislam@gmail.com)
-	Source        : https://github.com/farid132097/STM32G030_RTOS
-  Description   : ARM Cortex M0+ kernel for bare-metal RTOS
-  Created       : Sep 02, 2025, 09:30 PM
-  Last Modified : May 07, 2026, 11:01 AM
+   File          : kernel.h
+   Author        : MD. Faridul Islam (faridmdislam@gmail.com)
+	 Source        : https://github.com/farid132097/STM32G030_RTOS
+   Description   : ARM Cortex M0+ kernel for bare-metal RTOS
+   Created       : Sep 02, 2025, 09:30 PM
+   Last Modified : May 07, 2026, 02:48 PM
 	
 */
+
+
+
 
 #ifndef  _KERNEL_H_
 #define  _KERNEL_H_
 
 #include "stdint.h"
+
+
+
 
 void     Kernel_Init(void);
 void     Kernel_Start_Tasks(void);
@@ -26,6 +32,8 @@ uint32_t Kernel_Tick_S_Get(void);
 void     Kernel_Timeout_Set(uint32_t val);
 uint32_t Kernel_Is_Timeout(void);
 uint32_t Kernel_CPU_Usage_Get(void);
+
+
 
 #endif
 

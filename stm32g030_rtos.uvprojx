@@ -385,11 +385,6 @@
           <GroupName>inc</GroupName>
           <Files>
             <File>
-              <FileName>kernel.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\kernel.h</FilePath>
-            </File>
-            <File>
               <FileName>gpio.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\gpio.h</FilePath>
@@ -427,8 +422,13 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>asm</GroupName>
+          <GroupName>FRTOS</GroupName>
           <Files>
+            <File>
+              <FileName>kernel.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\kernel.h</FilePath>
+            </File>
             <File>
               <FileName>kernel.s</FileName>
               <FileType>2</FileType>
