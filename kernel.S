@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 07, 2026, 05:33 PM
+ ; Last Modified : May 11, 2026, 12:13 PM
 
 
 
@@ -31,6 +31,7 @@
 
 ;;==================================kernel config starting===================================;; 
 DEF_GPIO_TICK_DEBUG   EQU        0x00000000                        ;enable/disable gpio toggle
+DEF_64MHZ_PLL_ENABLE  EQU        0x00000000                        ;enable/disable PLL 64MHz
 ;;====================================kernel config end======================================;;
 
 
@@ -43,9 +44,28 @@ DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
 DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000
 DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000
 DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000
+DEF_FLASH_BASE        EQU        DEF_AHB_BASE        + 0x00002000
 DEF_SCS_BASE          EQU        0xE000E010
 DEF_SCB_BASE          EQU        0xE000ED00
 ;;=================================define address bases end==================================;; 
+
+
+
+
+
+;;==============================define flash addresses starting==============================;; 
+DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000
+;;================================define flash addresses end=================================;; 
+
+
+
+
+
+;;===============================define rcc addresses starting===============================;; 
+DEF_RCC_CR            EQU        DEF_RCC_BASE        + 0x00000000
+DEF_RCC_CFGR          EQU        DEF_RCC_BASE        + 0x00000008
+DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C
+;;==================================define rcc addresses end=================================;; 
 
 
 
@@ -149,6 +169,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
 
 
 ;;===========================global variable definition starting=============================;; 
+KER_SYSTICK_RLD       SPACE      4                                 ;systick reload val
 KER_TICK_SS           SPACE      8                                 ;64 bit sub-seconds counter
 KER_TICK_S            SPACE      4                                 ;32 bit seconds counter
 KER_TICK_S_CNT        SPACE      4                                 ;tick counter for Seconds
@@ -284,7 +305,7 @@ $ML.EXIT
 
 ;;===========================macro for gpio clear starting===================================;; 
 					  MACRO                                        ;macro start
-                      MACRO_GPIO_CLEAR $ML                         ;macro name
+                      MACRO_GPIO_CLEAR  $ML                        ;macro name
 					  ;if debug disabled, skip
 					  MOVS       R0,   #DEF_GPIO_TICK_DEBUG        ;load device config
 					  BEQ        $ML.EXIT                          ;jump to exit
@@ -299,12 +320,119 @@ $ML.EXIT
 
 
 
+;;========================macro for PLL Clock config starting================================;; 
+					  MACRO                                        ;macro start
+                      MACRO_64MHZ_PLL_CONFIG  $ML                  ;macro name
+$ML.HSI16ON
+					  LDR        R0,   =DEF_RCC_CR                 ;load addr
+					  LDR        R1,   [R0]                        ;load val
+					  LDR        R2,   =0x100                      ;bit8, HSI ON
+					  ORRS       R1,   R1, R2                      ;R1 | R2
+					  LDR        R2,   =0x3800                     ;bit 11,12,13 set
+					  MVNS       R2,   R2                          ;invert all bits
+					  ANDS       R1,   R1, R2                      ;clear HSIDIV
+					  STR        R1,   [R0]                        ;store val
+$ML.HSI16READY        
+                      LDR        R1,   [R0]                        ;load val
+					  LDR        R0,   =0x400                      ;bit10, HSIRDY
+					  TST        R0,   R1                          ;check bit 10
+					  BEQ        $ML.HSI16READY                    ;wait unitl ready
+$ML.CHECKCONFIG        
+					  MOVS       R0,   #DEF_64MHZ_PLL_ENABLE       ;load device config
+					  BEQ        $ML.CLOCK16MHZ                    ;jump to 16Mhz if 0
+$ML.CLOCK64MHZ        
+					  LDR        R0,   =63999                      ;load val for 1ms
+					  LDR        R1,   =KER_SYSTICK_RLD            ;load reload reg addr
+					  STR        R0,   [R1]                        ;store val
+					  LDR        R0,   =DEF_FLASH_ACR              ;load addr
+					  LDR        R1,   [R0]                        ;load data
+					  MOVS       R2,   #7                          ;load val
+					  MVNS       R2,   R2                          ;invert bits
+					  ANDS       R1,   R1, R2                      ;clear bits 0-2
+					  MOVS       R2,   #2                          ;load val
+					  ORRS       R1,   R1, R2                      ;set 2 wait states
+					  STR        R1,   [R0]                        ;store val
+$ML.WAITSTATES        
+                      LDR        R1,   [R0]                        ;load val
+					  MOVS       R2,   #7                          ;load val
+					  ANDS       R1,   R1, R2                      ;mask bits 0-2
+					  MOVS       R2,   #2                          ;load val
+					  CMP        R1,   R2                          ;compare
+					  BNE        $ML.WAITSTATES                    ;jmp to label
+$ML.PLLDISABLE        
+                      LDR        R0,   =DEF_RCC_CR                 ;load addr
+					  LDR        R1,   [R0]                        ;load val
+					  LDR        R2,   =0x01000000                 ;bit 24, PLLON
+					  MVNS       R2,   R2                          ;invert bits
+					  ANDS       R1,   R2                          ;clear bit
+					  STR        R1,   [R0]                        ;store val
+$ML.PLLUNLOCK         
+                      LDR        R1,   [R0]                        ;load val
+					  LDR        R2,   =0x02000000                 ;bit 25, PLLRDY
+					  ANDS       R1,   R2                          ;check bit
+					  BNE        $ML.PLLUNLOCK                     ;wait until unlocked
+$ML.PLLSETUP          
+                      LDR        R0,   =DEF_RCC_PLLCFGR            ;load addr
+					  LDR        R1,   =0x30000802                 ;R=2, N=8, N=1, REN, HSISRC
+					  STR        R1,   [R0]                        ;store val
+					  LDR        R0,   =DEF_RCC_CR                 ;load addr
+					  LDR        R1,   [R0]                        ;load val
+					  LDR        R2,   =0x01000000                 ;bit 24, PLLON
+					  ORRS       R1,   R1, R2                      ;set bit 24
+					  STR        R1,   [R0]                        ;store val
+$ML.PLLLOCK           
+                      LDR        R1,   [R0]                        ;load val
+					  LDR        R2,   =0x02000000                 ;bit 25, PLLRDY
+					  ANDS       R1,   R2                          ;check bit
+					  BEQ        $ML.PLLLOCK                       ;wait until locked
+$ML.SWPLLRSW           
+					  LDR        R0,   =DEF_RCC_CFGR               ;load addr
+					  LDR        R1,   [R0]                        ;load val
+					  MOVS       R2,   #0x07                       ;set bit0-2
+					  MVNS       R2,   R2                          ;invert all bits
+					  ANDS       R1,   R1, R2                      ;clear SW bits
+					  MOVS       R2,   #0x02                       ;PLLRCLK
+					  ORRS       R1,   R1, R2                      ;set PLLRCLK
+					  STR        R1,   [R0]                        ;store val
+$ML.SWSPLLR           
+					  LDR        R1,   [R0]                        ;load val
+					  MOVS       R2,   #0x38                       ;set bit0-2
+					  ANDS       R1,   R1, R2                      ;clear SW bits
+					  MOVS       R2,   #0x10                       ;PLLRCLK
+					  CMP        R1,   R2                          ;compare
+					  BNE        $ML.SWSPLLR                       ;jmp to label
+					  B          $ML.EXIT                          ;jmp to label
+$ML.CLOCK16MHZ
+                      LDR        R0,   =15999                      ;load val for 1ms
+					  LDR        R1,   =KER_SYSTICK_RLD            ;load reload reg addr
+					  STR        R0,   [R1]                        ;store val
+					  LDR        R0,   =DEF_RCC_CFGR               ;load addr
+					  LDR        R1,   [R0]                        ;load val
+					  MOVS       R2,   #0x07                       ;set bit0-2
+					  MVNS       R2,   R2                          ;invert all bits
+					  ANDS       R1,   R1, R2                      ;clear SW bits
+					  STR        R1,   [R0]                        ;store val
+$ML.SWSHSISYS         
+                      LDR        R1,   [R0]                        ;load val
+					  MOVS       R2,   #0x38                       ;bit 3,4,5 set
+					  TST        R1,   R2                          ;check bits
+					  BNE        $ML.SWSHSISYS                     ;wait until switched
+					  
+$ML.EXIT
+					  MEND                                         ;macro end
+;;==========================macro for PLL Clock config end===================================;; 
+
+
+
+
+
 ;;===========================macro for systick config starting===============================;; 
 					  MACRO                                        ;macro start
                       MACRO_SYSTICK_CONFIG                         ;macro name
-                      LDR        R0,   =DEF_STK_LOAD               ;load stk_load reg address
-					  LDR        R1,   =15999                      ;load val for 1ms
-					  STR        R1,   [R0]                        ;set val to reg
+					  LDR        R0,   =KER_SYSTICK_RLD            ;load reload reg addr
+					  LDR        R0,   [R0]                        ;load reload val
+                      LDR        R1,   =DEF_STK_LOAD               ;load stk_load reg address
+					  STR        R0,   [R1]                        ;set val to reg
 					  LDR        R0,   =DEF_STK_VAL                ;load stk_val reg address
 					  MOVS       R1,   #0x00                       ;clear reg
 					  STR        R1,   [R0]                        ;clear stk_val reg
@@ -678,8 +806,9 @@ Kernel_Idle_Task
 Kernel_Init
                       PUSH       {LR}
 					  
-					  MACRO_GPIO_INIT      PLBL1                   ;gpio init for debug
+					  MACRO_GPIO_INIT         PLBL1                ;gpio init for debug
 					  MACRO_SYS_VAR_INIT                           ;system variable init
+					  MACRO_64MHZ_PLL_CONFIG  PLBL2                ;config pll if enabled
 					  
 					  ;set PendSV as lowest priority interrupt
 					  LDR        R0,   =DEF_SCB_SHPR3              ;load SHPR3 addr
