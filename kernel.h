@@ -6,7 +6,7 @@
 	 Source        : https://github.com/farid132097/STM32G030_RTOS
    Description   : ARM Cortex M0+ kernel for bare-metal RTOS
    Created       : Sep 02, 2025, 09:30 PM
-   Last Modified : May 07, 2026, 05:33 PM
+   Last Modified : May 11, 2026, 05:24 PM
 */
 
 
@@ -30,7 +30,7 @@ uint64_t Kernel_Tick_SS64_Get(void);
 uint32_t Kernel_Tick_S_Get(void);
 void     Kernel_Timeout_Set(uint32_t val);
 uint32_t Kernel_Is_Timeout(void);
-uint32_t Kernel_CPU_Usage_Get(void);
+uint32_t Kernel_CPU_Usage_x10_Get(void);
 
 
 

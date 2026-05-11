@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 11, 2026, 12:13 PM
+ ; Last Modified : May 11, 2026, 05:24 PM
 
 
 
@@ -147,7 +147,7 @@ TASK_CONS_LAT         EQU        0x04                              ;constant lat
                       EXPORT     KER_TICK_SS
 					  EXPORT     KER_TICK_S
 					  EXPORT     KER_TICK_S_CNT
-					  EXPORT     KER_CMP_TICK_CNT
+					  EXPORT     KER_TOTAL_TICK_CNT
 					  EXPORT     KER_ACTV_TICK_CNT
 					  EXPORT     KER_CPU_USAGE
 					  EXPORT     KER_CPU_USAGE_AVG
@@ -173,7 +173,7 @@ KER_SYSTICK_RLD       SPACE      4                                 ;systick relo
 KER_TICK_SS           SPACE      8                                 ;64 bit sub-seconds counter
 KER_TICK_S            SPACE      4                                 ;32 bit seconds counter
 KER_TICK_S_CNT        SPACE      4                                 ;tick counter for Seconds
-KER_CMP_TICK_CNT      SPACE      4                                 ;reference tick counter
+KER_TOTAL_TICK_CNT    SPACE      4                                 ;reference tick counter
 KER_ACTV_TICK_CNT     SPACE      4                                 ;active task entry counter
 KER_CPU_USAGE         SPACE      4                                 ;instantenious cpu usage
 KER_CPU_USAGE_AVG     SPACE      4                                 ;average cpu usage
@@ -213,7 +213,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  EXPORT     Kernel_Tick_S_Get
 					  EXPORT     Kernel_Timeout_Set
 					  EXPORT     Kernel_Is_Timeout
-				      EXPORT     Kernel_CPU_Usage_Get
+				      EXPORT     Kernel_CPU_Usage_x10_Get
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
@@ -233,7 +233,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  STR        R1,   [R0]                        ;store tick_s val
 					  LDR        R0,   =KER_TICK_S_CNT             ;load tick_s_cnt addr
 					  STR        R1,   [R0]                        ;store all_tick_cnt val
-					  LDR        R0,   =KER_CMP_TICK_CNT           ;load all_tick_cnt addr
+					  LDR        R0,   =KER_TOTAL_TICK_CNT         ;load all_tick_cnt addr
 					  STR        R1,   [R0]                        ;store all_tick_cnt val
 					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load active_tick_cnt addr
 					  STR        R1,   [R0]                        ;store idle_tick_cnt val
@@ -757,7 +757,7 @@ $ML.EXIT
 					  ADDS       R0,   R0,  #1                     ;increment val
 					  STR        R0,   [R2]                        ;store val, R0 active_tick_cnt
 $ML.SKIP_INC                                                       ;label->no increment
-					  LDR        R1,   =KER_CMP_TICK_CNT           ;load cmp_tick_cnt addr
+					  LDR        R1,   =KER_TOTAL_TICK_CNT         ;load cmp_tick_cnt addr
 					  LDR        R2,   [R1]                        ;load cmp_tick_cnt val
 					  ADDS       R2,   R2,  #1                     ;increment val
 					  LDR        R3,   =1000                       ;load compare val
@@ -1090,7 +1090,7 @@ KER_IS_TOUT_EXIT
 
 
 ;;==============================kernel cpu usage get starting================================;; 
-Kernel_CPU_Usage_Get
+Kernel_CPU_Usage_x10_Get
 					  LDR        R0,   =KER_CPU_USAGE              ;load cpu_usage addr
 					  LDR        R0,   [R0]                        ;load cpu_usage val
 					  BX         LR                                ;return
