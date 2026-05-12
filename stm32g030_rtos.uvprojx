@@ -434,6 +434,16 @@
               <FileType>2</FileType>
               <FilePath>.\kernel.s</FilePath>
             </File>
+            <File>
+              <FileName>tasks.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\tasks.h</FilePath>
+            </File>
+            <File>
+              <FileName>tasks.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\tasks.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
