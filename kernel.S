@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 11, 2026, 05:24 PM
+ ; Last Modified : May 13, 2026, 03:59 PM
 
 
 
@@ -114,8 +114,8 @@ DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
 
 
 ;;============================define systick addresses starting==============================;; 
-DEF_KER_MAX_NTASK     EQU        0x0000000F                        ;max 15 tasks
-DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes stack
+DEF_KER_MAX_NTASK     EQU        0x00000005                        ;max 5 tasks
+DEF_KER_STACK_SIZE    EQU        0x00000200                        ;512 bytes stack
 DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 ;;===============================define systick addresses end================================;;
 
@@ -214,6 +214,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  EXPORT     Kernel_Timeout_Set
 					  EXPORT     Kernel_Is_Timeout
 				      EXPORT     Kernel_CPU_Usage_x10_Get
+					  EXPORT     Kernel_CPU_Usage_Avg_x10_Get
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
@@ -765,9 +766,17 @@ $ML.SKIP_INC                                                       ;label->no in
 					  BLO        $ML.SKIP_WRAP                     ;jmp to label
 					  LDR        R3,   =KER_CPU_USAGE              ;load cpu_usage addr
 					  STR        R0,   [R3]                        ;store
+					  LDR        R3,   =KER_CPU_USAGE_AVG          ;IIR LPF, Alpha=0.5
+					  LDR        R3,   [R3]                        ;load val
+					  LSRS       R0,   R0, #1                      ;divide by 2
+					  LSRS       R3,   R3, #1                      ;divide by 2
+					  ADDS       R0,   R0, R3                      ;prev/2 + curr/2
+					  LDR        R3,   =KER_CPU_USAGE_AVG          ;load addr
+					  STR        R0,   [R3]                        ;store avarge val
 					  MOVS       R2,   #0x00                       ;set val to 0
 					  LDR        R0,   =KER_ACTV_TICK_CNT          ;load cmp_tick_cnt addr
 					  STR        R2,   [R0]                        ;store
+					  
 $ML.SKIP_WRAP                                                      ;label->no wrapping
 					  STR        R2,   [R1]                        ;store new val
 $ML.EXIT                                                           ;label->exit
@@ -1095,6 +1104,17 @@ Kernel_CPU_Usage_x10_Get
 					  LDR        R0,   [R0]                        ;load cpu_usage val
 					  BX         LR                                ;return
 ;;=================================kernel cpu usage get end==================================;; 
+
+
+
+
+
+;;==========================kernel cpu usage average get starting============================;; 
+Kernel_CPU_Usage_Avg_x10_Get
+					  LDR        R0,   =KER_CPU_USAGE_AVG          ;load cpu_usage_avg addr
+					  LDR        R0,   [R0]                        ;load cpu_usage_avg val
+					  BX         LR                                ;return
+;;============================kernel cpu usage average get end===============================;; 
 
 
 
