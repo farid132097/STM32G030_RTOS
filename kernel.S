@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 13, 2026, 03:59 PM
+ ; Last Modified : May 20, 2026, 05:37 PM
 
 
 
@@ -821,7 +821,9 @@ Kernel_Init
 					  
 					  ;set PendSV as lowest priority interrupt
 					  LDR        R0,   =DEF_SCB_SHPR3              ;load SHPR3 addr
-					  LDR        R1,   =0xFF<<16                   ;set lowest priority
+					  LDR        R1,   [R0]                        ;load SHPR3 val
+					  LDR        R2,   =0xFF<<16                   ;set lowest priority
+					  ORRS       R1,   R2                          ;set all bits
 					  STR        R1,   [R0]                        ;store val
 					  
 					  LDR        R0,   =Kernel_Idle_Task           ;load idle task addr
