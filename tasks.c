@@ -7,13 +7,13 @@
 
 __attribute__((noreturn)) void Tasks_Task1(void){
 	  
-	  //GPIO_PA1_Init();
+	  GPIO_PA1_Init();
 	  
 	  while(1){
 		
-		    //GPIO_PA1_Set();
+		    GPIO_PA1_Set();
 		    Kernel_Task_Sleep(500);
-			  //GPIO_PA1_Clear();
+			  GPIO_PA1_Clear();
 			  Kernel_Task_Sleep(500);
 		    
 	  }
@@ -21,13 +21,13 @@ __attribute__((noreturn)) void Tasks_Task1(void){
 
 __attribute__((noreturn)) void Tasks_Task2(void){
 	  
-	  //GPIO_PA2_Init();
+	  GPIO_PA2_Init();
 	  
 	  while(1){
 		
-		    //GPIO_PA2_Set();
+		    GPIO_PA2_Set();
 		    Kernel_Task_Sleep(1000);
-			  //GPIO_PA2_Clear();
+			  GPIO_PA2_Clear();
 			  Kernel_Task_Sleep(1000);
 		    
 	  }
@@ -35,14 +35,16 @@ __attribute__((noreturn)) void Tasks_Task2(void){
 
 __attribute__((noreturn)) void Tasks_Task3(void){
 	  
-	  //GPIO_PA3_Init();
+	  GPIO_PA3_Init();
 	  
 	  while(1){
 		
-		    //GPIO_PA3_Set();
+		    GPIO_PA3_Set();
 		    Kernel_Task_Sleep(2000);
-			  //GPIO_PA3_Clear();
+			  GPIO_PA3_Clear();
 			  Kernel_Task_Sleep(2000);
 		    
 	  }
 }
+
+
