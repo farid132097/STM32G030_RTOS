@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : May 22, 2026, 11:43 PM
+ ; Last Modified : Sep 08, 2026, 01:33 PM
 
 
 
@@ -30,9 +30,12 @@
 
 
 ;;==================================kernel config starting===================================;; 
+DEF_KERNEL_VER_MAJOR  EQU        0x00000001                        ;set kernel version major
+DEF_KERNEL_VER_MINOR  EQU        0x00000000                        ;set kernel version minor
+DEF_KERNEL_VER_PATCH  EQU        0x00000000                        ;set kernel version patch
 DEF_GPIO_TICK_DEBUG   EQU        0x00000000                        ;enable/disable gpio toggle
 DEF_64MHZ_PLL_ENABLE  EQU        0x00000000                        ;enable/disable PLL 64MHz
-;;====================================kernel config end======================================;; 
+;;====================================kernel config end======================================;;
 
 
 
@@ -41,15 +44,10 @@ DEF_64MHZ_PLL_ENABLE  EQU        0x00000000                        ;enable/disab
 ;;===============================define address bases starting===============================;; 
 DEF_PERIPHERAL_BASE   EQU        0x40000000
 DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
-DEF_APB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00000000
-DEF_APB1_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00000000
-DEF_APB2_BASE         EQU        DEF_PERIPHERAL_BASE + 0x00010000
-DEF_PWR_BASE          EQU        DEF_APB1_BASE       + 0x00007000
 DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000
 DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000
 DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000
 DEF_FLASH_BASE        EQU        DEF_AHB_BASE        + 0x00002000
-DEF_RTC_BASE          EQU        DEF_APB1_BASE       + 0x00002800
 DEF_SCS_BASE          EQU        0xE000E010
 DEF_SCB_BASE          EQU        0xE000ED00
 ;;=================================define address bases end==================================;; 
@@ -66,35 +64,11 @@ DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000
 
 
 
-;;===============================define pwr addresses starting===============================;; 
-DEF_PWR_CR1           EQU        DEF_PWR_BASE        + 0x00000000
-;;=================================define pwr addresses end==================================;; 
-
-
-
-
-
 ;;===============================define rcc addresses starting===============================;; 
 DEF_RCC_CR            EQU        DEF_RCC_BASE        + 0x00000000
 DEF_RCC_CFGR          EQU        DEF_RCC_BASE        + 0x00000008
 DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C
-DEF_RCC_APBENR1       EQU        DEF_RCC_BASE        + 0x0000003C
-DEF_RCC_BDCR          EQU        DEF_RCC_BASE        + 0x0000005C
-DEF_RCC_CSR           EQU        DEF_RCC_BASE        + 0x00000060
 ;;==================================define rcc addresses end=================================;; 
-
-
-
-
-
-;;==============================define rtc addresses starting================================;; 
-DEF_RTC_ICSR          EQU        DEF_RTC_BASE        + 0x0000000C
-DEF_RTC_WUTR          EQU        DEF_RTC_BASE        + 0x00000014
-DEF_RTC_CR            EQU        DEF_RTC_BASE        + 0x00000018
-DEF_RTC_WPR           EQU        DEF_RTC_BASE        + 0x00000024
-DEF_RTC_SR            EQU        DEF_RTC_BASE        + 0x00000050
-DEF_RTC_SCR           EQU        DEF_RTC_BASE        + 0x0000005C
-;;==============================define rtc addresses starting================================;; 
 
 
 
@@ -143,8 +117,8 @@ DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
 
 
 ;;============================define systick addresses starting==============================;; 
-DEF_KER_MAX_NTASK     EQU        0x00000005                        ;max 5 tasks
-DEF_KER_STACK_SIZE    EQU        0x00000200                        ;512 bytes stack
+DEF_KER_MAX_NTASK     EQU        0x0000000A                        ;max 10 tasks
+DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes stack
 DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 ;;===============================define systick addresses end================================;;
 
@@ -244,6 +218,9 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 					  EXPORT     Kernel_Is_Timeout
 				      EXPORT     Kernel_CPU_Usage_x10_Get
 					  EXPORT     Kernel_CPU_Usage_Avg_x10_Get
+				      EXPORT     Kernel_Version_Major_Get
+					  EXPORT     Kernel_Version_Minor_Get
+					  EXPORT     Kernel_Version_Patch_Get
 					  EXPORT     SysTick_Handler
 					  EXPORT     PendSV_Handler
 ;;===========================global function declaration end=================================;; 
@@ -447,6 +424,7 @@ $ML.SWSHSISYS
 					  MOVS       R2,   #0x38                       ;bit 3,4,5 set
 					  TST        R1,   R2                          ;check bits
 					  BNE        $ML.SWSHSISYS                     ;wait until switched
+					  
 $ML.EXIT
 					  MEND                                         ;macro end
 ;;==========================macro for PLL Clock config end===================================;; 
@@ -455,9 +433,9 @@ $ML.EXIT
 
 
 
-;;=======================macro for systick timer init starting===============================;; 
+;;===========================macro for systick config starting===============================;; 
 					  MACRO                                        ;macro start
-                      MACRO_SYSTICK_TIMER_INIT                     ;macro name
+                      MACRO_SYSTICK_CONFIG                         ;macro name
 					  LDR        R0,   =KER_SYSTICK_RLD            ;load reload reg addr
 					  LDR        R0,   [R0]                        ;load reload val
                       LDR        R1,   =DEF_STK_LOAD               ;load stk_load reg address
@@ -469,100 +447,7 @@ $ML.EXIT
 					  MOVS       R1,   #0x07                       ;mask bit0, bit1 & bit2
 					  STR        R1,   [R0]                        ;set val to stk_ctrl
 					  MEND                                         ;macro end
-;;==========================macro for systick timer init end=================================;; 
-
-
-
-
-
-;;=======================macro for low power rtc init starting===============================;; 
-					  MACRO                                        ;macro start
-                      MACRO_LOW_POWER_RTC_INIT  $ML                ;macro name
-					  LDR        R0,   =DEF_RCC_CSR                ;load reg addr
-					  LDR        R1,   [R0]                        ;load val
-					  MOVS       R2,   #0x01                       ;set bit 0 LSION
-					  ORRS       R1,   R1, R2                      ;set in reg val
-					  STR        R1,   [R0]                        ;store val
-$ML.LSIREADY          
-                      LDR        R1,   [R0]                        ;load val
-					  MOVS       R2,   #0x02                       ;set bit 1
-					  TST        R1,   R2                          ;and 2 regs
-					  BEQ        $ML.LSIREADY                      ;if 0, go to label
-					  LDR        R0,   =DEF_RCC_APBENR1            ;load reg addr
-					  LDR        R1,   [R0]                        ;load val
-                      LDR        R2,   =0x10000000                 ;set bit 28 PWREN
-					  ORRS       R1,   R1, R2                      ;set in reg val
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,   =DEF_PWR_CR1                ;load reg addr
-					  LDR        R1,   [R0]                        ;load val
-                      LDR        R2,   =0x100                      ;set bit 8 DBP
-					  ORRS       R1,   R1, R2                      ;set in reg val
-					  STR        R1,   [R0]                        ;store val
-					  LDR        R0,   =DEF_RCC_BDCR               ;load reg addr
-					  LDR        R1,   [R0]                        ;load val
-                      LDR        R2,   =0x300                      ;mask bit 8,9
-					  MVNS       R2,   R2                          ;invert bits
-					  ANDS       R1,   R1, R2                      ;clear bit 8,9
-					  LDR        R2,   =0x8200                     ;set 2 in bit 9:8, RTCEN
-					  ORRS       R1,   R1, R2                      ;set val in reg
-					  STR        R1,   [R0]                        ;store val
-					  
-					  LDR        R0,   =DEF_RTC_WPR                ;load reg addr
-					  MOVS       R1,   #0xCA                       ;load val
-					  MOVS       R2,   #0x53                       ;load val
-					  STR        R1,   [R0]                        ;store val
-					  STR        R2,   [R0]                        ;store val
-					  LDR        R0,   =DEF_RTC_CR                 ;load reg addr
-					  LDR        R1,   [R0]                        ;load val
-					  LDR        R2,   =0x400                      ;mask WUTE
-					  MVNS       R2,   R2                          ;invert bits
-					  ANDS       R1,   R1, R2                      ;clear WUTE bit
-					  STR        R1,   [R0]                        ;store val
-$ML.RTCWUTWFSET       
-                      LDR        R0,   =DEF_RTC_ICSR               ;load reg addr
-					  LDR        R1,   [R0]                        ;load val
-					  MOVS       R2,   #0x04                       ;set bit 2, WUTWF
-					  TST        R1,   R2                          ;and regs
-					  BEQ        $ML.RTCWUTWFSET                   ;wait until WUTWF = 1
-					  MEND                                         ;macro end
-;;==========================macro for low power rtc init end=================================;; 
-
-
-
-
-
-;;===========================macro for systick config starting===============================;; 
-					  MACRO                                        ;macro start
-                      MACRO_SYSTICK_CONFIG      $ML                ;macro name
-					  MACRO_SYSTICK_TIMER_INIT                     ;high performance mode
-					  ;MACRO_LOW_POWER_RTC_INIT   ML                ;low power mode
-					  MEND                                         ;macro end
 ;;=============================macro for systick config end==================================;; 
-
-
-
-
-
-;;======================macro for pushing R0-R3,R12,LR,PC,xPSR starting======================;; 
-                      MACRO                                        ;macro start
-					  MACRO_PUSH_R0_R3_R12_LR_PC_xPSR              ;macro name
-					  MRS        R0,   PSP                         ;load PSP in R0
-					  SUBS       R0,   #32                         ;subtract 32 bytes
-					  STR        R4,   [R0, #0]                    ;load data
-					  STR        R5,   [R0, #4]                    ;load data
-					  STR        R6,   [R0, #8]                    ;load data
-					  STR        R7,   [R0, #12]                   ;load data
-					  MOV        R1,   R8                          ;copy
-					  STR        R1,   [R0, #16]                   ;load data
-					  MOV        R1,   R9                          ;copy
-					  STR        R1,   [R0, #20]                   ;load data
-					  MOV        R1,   R10                         ;copy
-					  STR        R1,   [R0, #24]                   ;load data
-					  MOV        R1,   R11                         ;copy
-					  STR        R1,   [R0, #28]                   ;load data
-					  MSR        PSP,  R0                          ;update new top of stack
-					  MEND                                         ;macro end
-;;=========================macro for pushing R0-R3,R12,LR,PC,xPSR end========================;; 
 
 
 
@@ -1014,7 +899,7 @@ Kernel_Task_Create
 ;;=================================start tasks starting======================================;; 
 Kernel_Start_Tasks
                       ;configure SysTick timer
-                      MACRO_SYSTICK_CONFIG    PLBL3                ;configure systick
+                      MACRO_SYSTICK_CONFIG                         ;configure systick
 					  ;calculate stack top for this task
 					  LDR        R0,   =DEF_KER_STACK_SIZE         ;load each stack size
 					  LDR        R1,   =KER_TASK_STACK             ;PSP start base
@@ -1214,6 +1099,35 @@ Kernel_CPU_Usage_Avg_x10_Get
 					  BX         LR                                ;return
 ;;============================kernel cpu usage average get end===============================;; 
 
+
+
+
+
+;;============================kernel version major get starting==============================;; 
+Kernel_Version_Major_Get
+					  MOVS       R0,   #DEF_KERNEL_VER_MAJOR       ;load kernel ver major val
+					  BX         LR                                ;return
+;;==============================kernel version major get end=================================;; 
+
+
+
+
+
+;;============================kernel version minor get starting==============================;; 
+Kernel_Version_Minor_Get
+					  MOVS       R0,   #DEF_KERNEL_VER_MINOR       ;load kernel ver minor val
+					  BX         LR                                ;return
+;;==============================kernel version minor get end=================================;; 
+
+
+
+
+
+;;============================kernel version patch get starting==============================;; 
+Kernel_Version_Patch_Get
+					  MOVS       R0,   #DEF_KERNEL_VER_PATCH       ;load kernel ver patch val
+					  BX         LR                                ;return
+;;==============================kernel version patch get end=================================;; 
 
 
 
