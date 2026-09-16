@@ -35,6 +35,8 @@ DEF_KERNEL_VER_MINOR  EQU        0x00000000                        ;set kernel v
 DEF_KERNEL_VER_PATCH  EQU        0x00000000                        ;set kernel version patch
 DEF_GPIO_TICK_DEBUG   EQU        0x00000000                        ;enable/disable gpio toggle
 DEF_64MHZ_PLL_ENABLE  EQU        0x00000000                        ;enable/disable PLL 64MHz
+DEF_KER_MAX_NTASK     EQU        0x00000003                        ;number of maximum tasks
+DEF_KER_STACK_SIZE    EQU        0x00000080                        ;stack size for each task
 ;;====================================kernel config end======================================;;
 
 
@@ -78,7 +80,6 @@ DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C
 DEF_STK_CTRL          EQU        DEF_SCS_BASE        + 0x00000000
 DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004
 DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
-DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 ;;===============================define systick addresses end================================;;
 
 
@@ -86,13 +87,7 @@ DEF_STK_CALIB         EQU        DEF_SCS_BASE        + 0x0000000C
 
 
 ;;===============================define SCB addresses starting===============================;; 
-DEF_SCB_CPUID         EQU        DEF_SCB_BASE        + 0x00000000
 DEF_SCB_ICSR          EQU        DEF_SCB_BASE        + 0x00000004
-DEF_SCB_VTOR          EQU        DEF_SCB_BASE        + 0x00000008
-DEF_SCB_AIRCR         EQU        DEF_SCB_BASE        + 0x0000000C
-DEF_SCB_SCR           EQU        DEF_SCB_BASE        + 0x00000010
-DEF_SCB_CCR           EQU        DEF_SCB_BASE        + 0x00000014
-DEF_SCB_SHPR2         EQU        DEF_SCB_BASE        + 0x0000001C
 DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020
 ;;==================================define SCB addresses end=================================;;
 
@@ -116,11 +111,9 @@ DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
 
 
 
-;;============================define systick addresses starting==============================;; 
-DEF_KER_MAX_NTASK     EQU        0x0000000A                        ;max 10 tasks
-DEF_KER_STACK_SIZE    EQU        0x00000100                        ;256 bytes stack
+;;==========================define stack size related value starting=========================;; 
 DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
-;;===============================define systick addresses end================================;;
+;;============================define stack size related value end============================;; 
 
 
 
@@ -198,7 +191,7 @@ KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeo
 
 
 ;;==============================code area definition starting================================;; 
-                      AREA       |.text|, CODE, READONLY
+                      AREA       |.ram_code|, CODE, READONLY, ALIGN=4
 ;;=================================code area definition end==================================;; 
 
 
