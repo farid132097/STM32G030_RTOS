@@ -7,7 +7,7 @@
  ; Description   : ARM Cortex M0+ kernel for bare-metal RTOS
  ; Devices       : Tested on STM32G030F6P6
  ; Created       : Sep 02, 2025, 09:30 PM
- ; Last Modified : Sep 08, 2026, 01:33 PM
+ ; Last Modified : Sep 25, 2026, 11:25 PM
 
 
 
@@ -44,14 +44,14 @@ DEF_KER_STACK_SIZE    EQU        0x00000080                        ;stack size f
 
 
 ;;===============================define address bases starting===============================;; 
-DEF_PERIPHERAL_BASE   EQU        0x40000000
-DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000
-DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000
-DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000
-DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000
-DEF_FLASH_BASE        EQU        DEF_AHB_BASE        + 0x00002000
-DEF_SCS_BASE          EQU        0xE000E010
-DEF_SCB_BASE          EQU        0xE000ED00
+DEF_PERIPHERAL_BASE   EQU        0x40000000                        ;peripheral srat address
+DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000  ;AHB srat address
+DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000  ;IO port srat address
+DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000  ;GPIO srat address
+DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000  ;RCC srat address
+DEF_FLASH_BASE        EQU        DEF_AHB_BASE        + 0x00002000  ;Flash srat address
+DEF_SCS_BASE          EQU        0xE000E010                        ;SCS srat address
+DEF_SCB_BASE          EQU        0xE000ED00                        ;SCB srat address
 ;;=================================define address bases end==================================;; 
 
 
@@ -59,7 +59,7 @@ DEF_SCB_BASE          EQU        0xE000ED00
 
 
 ;;==============================define flash addresses starting==============================;; 
-DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000
+DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000  ;Flash srat address
 ;;================================define flash addresses end=================================;; 
 
 
@@ -67,9 +67,9 @@ DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000
 
 
 ;;===============================define rcc addresses starting===============================;; 
-DEF_RCC_CR            EQU        DEF_RCC_BASE        + 0x00000000
-DEF_RCC_CFGR          EQU        DEF_RCC_BASE        + 0x00000008
-DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C
+DEF_RCC_CR            EQU        DEF_RCC_BASE        + 0x00000000  ;RCC->CR srat address
+DEF_RCC_CFGR          EQU        DEF_RCC_BASE        + 0x00000008  ;RCC->CFGR srat address
+DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C  ;RCC->PLLCFGR srat address
 ;;==================================define rcc addresses end=================================;; 
 
 
@@ -77,9 +77,9 @@ DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C
 
 
 ;;============================define systick addresses starting==============================;; 
-DEF_STK_CTRL          EQU        DEF_SCS_BASE        + 0x00000000
-DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004
-DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
+DEF_STK_CTRL          EQU        DEF_SCS_BASE        + 0x00000000  ;Systick->CTRL srat address
+DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004  ;Systick->LOAD srat address
+DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008  ;Systick->VAL srat address
 ;;===============================define systick addresses end================================;;
 
 
@@ -87,8 +87,8 @@ DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008
 
 
 ;;===============================define SCB addresses starting===============================;; 
-DEF_SCB_ICSR          EQU        DEF_SCB_BASE        + 0x00000004
-DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020
+DEF_SCB_ICSR          EQU        DEF_SCB_BASE        + 0x00000004  ;SCB->ICSR srat address
+DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020  ;SCB->SHPR3 srat address
 ;;==================================define SCB addresses end=================================;;
 
 
@@ -96,15 +96,15 @@ DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020
 
 
 ;;===========================define GPIO related addresses starting==========================;; 
-DEF_RCC_IOPENR        EQU        DEF_RCC_BASE        + 0x00000034
-DEF_GPIOA_BASE        EQU        DEF_GPIO_BASE       + 0x00000000
-DEF_GPIOB_BASE        EQU        DEF_GPIO_BASE       + 0x00000400
-DEF_GPIOC_BASE        EQU        DEF_GPIO_BASE       + 0x00000800
-DEF_GPIOD_BASE        EQU        DEF_GPIO_BASE       + 0x00000C00
-DEF_GPIOE_BASE        EQU        DEF_GPIO_BASE       + 0x00001000
-DEF_GPIOF_BASE        EQU        DEF_GPIO_BASE       + 0x00001400
-DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000
-DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
+DEF_RCC_IOPENR        EQU        DEF_RCC_BASE        + 0x00000034  ;RCC->IOPENR srat address
+DEF_GPIOA_BASE        EQU        DEF_GPIO_BASE       + 0x00000000  ;GPIOA srat address
+DEF_GPIOB_BASE        EQU        DEF_GPIO_BASE       + 0x00000400  ;GPIOB srat address
+DEF_GPIOC_BASE        EQU        DEF_GPIO_BASE       + 0x00000800  ;GPIOC srat address
+DEF_GPIOD_BASE        EQU        DEF_GPIO_BASE       + 0x00000C00  ;GPIOD srat address
+DEF_GPIOE_BASE        EQU        DEF_GPIO_BASE       + 0x00001000  ;GPIOE srat address
+DEF_GPIOF_BASE        EQU        DEF_GPIO_BASE       + 0x00001400  ;GPIOF srat address
+DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000  ;GPIOA->MODER srat address
+DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018  ;GPIOA->BSRR srat address
 ;;=============================define GPIO related addresses end=============================;; 
 
 
@@ -112,7 +112,7 @@ DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018
 
 
 ;;==========================define stack size related value starting=========================;; 
-DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
+DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK * DEF_KER_STACK_SIZE   ;max stack size
 ;;============================define stack size related value end============================;; 
 
 
@@ -120,11 +120,11 @@ DEF_KER_STACK_SPACE   EQU        DEF_KER_MAX_NTASK*DEF_KER_STACK_SIZE
 
 
 ;;================================define system macro starting===============================;; 
-TASK_BLOCKED          EQU        0x00                              ;blocked state                    
-TASK_READY            EQU        0x01                              ;ready state                     
-TASK_EXECUTING        EQU        0x02                              ;executing state                       
-TASK_SUSPENDED        EQU        0x03                              ;suspended state                    
-TASK_CONS_LAT         EQU        0x04                              ;constant latency state 
+TASK_READY            EQU        0x00                              ;ready state                 
+TASK_BLOCKED          EQU        0x01                              ;blocked state               
+TASK_SUSPENDED        EQU        0x02                              ;suspended state             
+TASK_CONS_LAT         EQU        0x03                              ;constant latency state      
+TASK_EXECUTING        EQU        0x04                              ;executing state             
 ;;===================================define system macro end=================================;; 
 
 
@@ -174,16 +174,16 @@ KER_ACTV_TICK_CNT     SPACE      4                                 ;active task 
 KER_CPU_USAGE         SPACE      4                                 ;instantenious cpu usage
 KER_CPU_USAGE_AVG     SPACE      4                                 ;average cpu usage
 KER_NTASK             SPACE      4                                 ;total created tasks
-KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE+0x08          ;total stack space
+KER_TASK_STACK        SPACE      DEF_KER_STACK_SPACE + 0x08        ;total stack space
 KER_TASK_ID           SPACE      4                                 ;current task id
-KER_TASK_PSP          SPACE      4*DEF_KER_MAX_NTASK               ;PSP for 10 tasks
-KER_TASK_PRIO         SPACE      4*DEF_KER_MAX_NTASK               ;task priority
+KER_TASK_PSP          SPACE      4 * DEF_KER_MAX_NTASK             ;PSP for 10 tasks
+KER_TASK_PRIO         SPACE      4 * DEF_KER_MAX_NTASK             ;task priority
 KER_TASK_HI_PRIO      SPACE      4                                 ;highest priority
 KER_TASK_PRIO_TID     SPACE      4                                 ;highest priority task_id
-KER_TASK_SLEEP        SPACE      4*DEF_KER_MAX_NTASK               ;task sleep duration
+KER_TASK_SLEEP        SPACE      4 * DEF_KER_MAX_NTASK             ;task sleep duration
 KER_TASK_YIELD        SPACE      4                                 ;task yield status
-KER_TASK_STS          SPACE      4*DEF_KER_MAX_NTASK               ;task status
-KER_TASK_TOUT         SPACE      8*DEF_KER_MAX_NTASK               ;2 byte timeout timestamps
+KER_TASK_STS          SPACE      4 * DEF_KER_MAX_NTASK             ;task status
+KER_TASK_TOUT         SPACE      8 * DEF_KER_MAX_NTASK             ;2 byte timeout timestamps
 ;;=============================global variable definition end================================;; 
 
 
