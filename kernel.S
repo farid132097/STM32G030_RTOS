@@ -44,14 +44,14 @@ DEF_KER_STACK_SIZE    EQU        0x00000080                        ;stack size f
 
 
 ;;===============================define address bases starting===============================;; 
-DEF_PERIPHERAL_BASE   EQU        0x40000000                        ;peripheral srat address
-DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000  ;AHB srat address
-DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000  ;IO port srat address
-DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000  ;GPIO srat address
-DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000  ;RCC srat address
-DEF_FLASH_BASE        EQU        DEF_AHB_BASE        + 0x00002000  ;Flash srat address
-DEF_SCS_BASE          EQU        0xE000E010                        ;SCS srat address
-DEF_SCB_BASE          EQU        0xE000ED00                        ;SCB srat address
+DEF_PERIPHERAL_BASE   EQU        0x40000000                        ;peripheral start address
+DEF_AHB_BASE          EQU        DEF_PERIPHERAL_BASE + 0x00020000  ;AHB start address
+DEF_IOPORT_BASE       EQU        DEF_PERIPHERAL_BASE + 0x10000000  ;IO port start address
+DEF_GPIO_BASE         EQU        DEF_IOPORT_BASE     + 0x00000000  ;GPIO start address
+DEF_RCC_BASE          EQU        DEF_AHB_BASE        + 0x00001000  ;RCC start address
+DEF_FLASH_BASE        EQU        DEF_AHB_BASE        + 0x00002000  ;Flash start address
+DEF_SCS_BASE          EQU        0xE000E010                        ;SCS start address
+DEF_SCB_BASE          EQU        0xE000ED00                        ;SCB start address
 ;;=================================define address bases end==================================;; 
 
 
@@ -59,7 +59,7 @@ DEF_SCB_BASE          EQU        0xE000ED00                        ;SCB srat add
 
 
 ;;==============================define flash addresses starting==============================;; 
-DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000  ;Flash srat address
+DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000  ;Flash start address
 ;;================================define flash addresses end=================================;; 
 
 
@@ -67,9 +67,9 @@ DEF_FLASH_ACR         EQU        DEF_FLASH_BASE      + 0x00000000  ;Flash srat a
 
 
 ;;===============================define rcc addresses starting===============================;; 
-DEF_RCC_CR            EQU        DEF_RCC_BASE        + 0x00000000  ;RCC->CR srat address
-DEF_RCC_CFGR          EQU        DEF_RCC_BASE        + 0x00000008  ;RCC->CFGR srat address
-DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C  ;RCC->PLLCFGR srat address
+DEF_RCC_CR            EQU        DEF_RCC_BASE        + 0x00000000  ;RCC->CR start address
+DEF_RCC_CFGR          EQU        DEF_RCC_BASE        + 0x00000008  ;RCC->CFGR start address
+DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C  ;RCC->PLLCFGR start address
 ;;==================================define rcc addresses end=================================;; 
 
 
@@ -77,9 +77,9 @@ DEF_RCC_PLLCFGR       EQU        DEF_RCC_BASE        + 0x0000000C  ;RCC->PLLCFGR
 
 
 ;;============================define systick addresses starting==============================;; 
-DEF_STK_CTRL          EQU        DEF_SCS_BASE        + 0x00000000  ;Systick->CTRL srat address
-DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004  ;Systick->LOAD srat address
-DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008  ;Systick->VAL srat address
+DEF_STK_CTRL          EQU        DEF_SCS_BASE        + 0x00000000  ;Systick->CTRL start address
+DEF_STK_LOAD          EQU        DEF_SCS_BASE        + 0x00000004  ;Systick->LOAD start address
+DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008  ;Systick->VAL start address
 ;;===============================define systick addresses end================================;;
 
 
@@ -87,8 +87,8 @@ DEF_STK_VAL           EQU        DEF_SCS_BASE        + 0x00000008  ;Systick->VAL
 
 
 ;;===============================define SCB addresses starting===============================;; 
-DEF_SCB_ICSR          EQU        DEF_SCB_BASE        + 0x00000004  ;SCB->ICSR srat address
-DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020  ;SCB->SHPR3 srat address
+DEF_SCB_ICSR          EQU        DEF_SCB_BASE        + 0x00000004  ;SCB->ICSR start address
+DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020  ;SCB->SHPR3 start address
 ;;==================================define SCB addresses end=================================;;
 
 
@@ -96,15 +96,12 @@ DEF_SCB_SHPR3         EQU        DEF_SCB_BASE        + 0x00000020  ;SCB->SHPR3 s
 
 
 ;;===========================define GPIO related addresses starting==========================;; 
-DEF_RCC_IOPENR        EQU        DEF_RCC_BASE        + 0x00000034  ;RCC->IOPENR srat address
-DEF_GPIOA_BASE        EQU        DEF_GPIO_BASE       + 0x00000000  ;GPIOA srat address
-DEF_GPIOB_BASE        EQU        DEF_GPIO_BASE       + 0x00000400  ;GPIOB srat address
-DEF_GPIOC_BASE        EQU        DEF_GPIO_BASE       + 0x00000800  ;GPIOC srat address
-DEF_GPIOD_BASE        EQU        DEF_GPIO_BASE       + 0x00000C00  ;GPIOD srat address
-DEF_GPIOE_BASE        EQU        DEF_GPIO_BASE       + 0x00001000  ;GPIOE srat address
-DEF_GPIOF_BASE        EQU        DEF_GPIO_BASE       + 0x00001400  ;GPIOF srat address
-DEF_GPIOA_MODER       EQU        DEF_GPIOA_BASE      + 0x00000000  ;GPIOA->MODER srat address
-DEF_GPIOA_BSRR        EQU        DEF_GPIOA_BASE      + 0x00000018  ;GPIOA->BSRR srat address
+DEF_RCC_IOPENR        EQU        DEF_RCC_BASE        + 0x00000034  ;RCC->IOPENR start address
+DEF_DBG_GPIO_PORT     EQU        0x00000000                        ;any value 0-5 (0->A, 1->B..)
+DEF_DBG_GPIO_PIN      EQU        0x00000000                        ;any value 0-15
+DEF_DBG_OFF           EQU        DEF_DBG_GPIO_PORT   * 0x00000400  ;calculate offset
+DEF_DBG_GPIO_MODER    EQU        DEF_GPIO_BASE       + DEF_DBG_OFF ;calculate MODER addr
+DEF_DBG_GPIO_BSRR     EQU        DEF_DBG_GPIO_MODER  + 0x00000018  ;calculate BSRR addr
 ;;=============================define GPIO related addresses end=============================;; 
 
 
@@ -263,21 +260,27 @@ KER_TASK_TOUT         SPACE      8 * DEF_KER_MAX_NTASK             ;2 byte timeo
 					  ;enable clock from rcc
                       LDR        R0,   =DEF_RCC_IOPENR             ;load IOPENR address
 					  LDR        R1,   [R0]                        ;load IOPENR val
-					  MOVS       R2,   #0x01                       ;mask bit0
-	                  ORRS       R1,   R1, R2                      ;set bit 0
+					  MOVS       R2,   #0x01                       ;set val 1
+					  LSLS       R2,   R2, #DEF_DBG_GPIO_PORT      ;left shift to bit mask
+	                  ORRS       R1,   R1, R2                      ;set bit WRT PORT
 					  STR        R1,   [R0]                        ;store val to IOPENR
 					  ;set ODR pin low
-					  LDR        R0,   =DEF_GPIOA_BSRR             ;load BSRR address
-					  LDR        R1,   =0x00010000                 ;bit0 clear
+					  LDR        R0,   =DEF_DBG_GPIO_BSRR          ;load BSRR address
+					  MOVS       R1,   #0x01                       ;set val 1
+					  LSLS       R1,   R1, #DEF_DBG_GPIO_PIN       ;left shift to bit mask
+					  ADDS       R1,   R1, #16                     ;set BSRR->BRx bit
 					  STR        R1,   [R0]                        ;store val
 					  ;set pin as general purpose i/o
-					  LDR        R0,   =DEF_GPIOA_MODER            ;load MODER address
+					  LDR        R0,   =DEF_DBG_GPIO_MODER         ;load MODER address
 					  LDR        R1,   [R0]                        ;load MODER val
-					  LDR        R2,   =0xFFFFFF00                 ;to clear mode0-3
-					  ANDS       R1,   R1, R2                      ;clear mode0-3
-					  LDR        R2,   =0x00000055                 ;to output mode
+					  MOVS       R2,   #0x03                       ;set val 3
+					  LSLS       R2,   R2, #DEF_DBG_GPIO_PIN       ;left shift to group mask
+					  MVNS       R2,   R2                          ;invert bits
+					  ANDS       R1,   R1, R2                      ;clear mode bits
+					  MOVS       R2,   #0x01                       ;set val 1
+					  LSLS       R2,   R2, #DEF_DBG_GPIO_PIN       ;left shift to bit mask
 					  ORRS       R1,   R1, R2                      ;set output mode
-					  STR        R1,   [R0]                        ;store val GPIOA
+					  STR        R1,   [R0]                        ;store val to MODER
 $ML.EXIT
                       MEND                                         ;macro end
 ;;==============================macro for gpio init end======================================;; 
