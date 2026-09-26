@@ -102,6 +102,8 @@ DEF_DBG_GPIO_PIN      EQU        0x00000000                        ;any value 0-
 DEF_DBG_OFF           EQU        DEF_DBG_GPIO_PORT   * 0x00000400  ;calculate offset
 DEF_DBG_GPIO_MODER    EQU        DEF_GPIO_BASE       + DEF_DBG_OFF ;calculate MODER addr
 DEF_DBG_GPIO_BSRR     EQU        DEF_DBG_GPIO_MODER  + 0x00000018  ;calculate BSRR addr
+DEF_DBG_BSRR_BS_VAL   EQU        ( 1 << DEF_DBG_GPIO_PIN)          ;calculate BS val
+DEF_DBG_BSRR_BR_VAL   EQU        ((1 << DEF_DBG_GPIO_PIN) + 16)    ;calculate BR val
 ;;=============================define GPIO related addresses end=============================;; 
 
 
@@ -295,8 +297,8 @@ $ML.EXIT
 					  ;if debug disabled, skip
 					  MOVS       R0,   #DEF_GPIO_TICK_DEBUG        ;load device config
 					  BEQ        $ML.EXIT                          ;jump to exit
-					  LDR        R0,   =DEF_GPIOA_BSRR             ;load BSRR address
-					  MOVS       R1,   #0x01                       ;bit0 set
+					  LDR        R0,   =DEF_DBG_GPIO_BSRR          ;load BSRR address
+					  LDR        R1,   =DEF_DBG_BSRR_BS_VAL        ;load bit set val
 					  STR        R1,   [R0]                        ;store val
 $ML.EXIT
                       MEND                                         ;macro end
@@ -312,8 +314,8 @@ $ML.EXIT
 					  ;if debug disabled, skip
 					  MOVS       R0,   #DEF_GPIO_TICK_DEBUG        ;load device config
 					  BEQ        $ML.EXIT                          ;jump to exit
-					  LDR        R0,   =DEF_GPIOA_BSRR             ;load BSRR address
-					  LDR        R1,   =0x00010000                 ;bit0 clear
+					  LDR        R0,   =DEF_DBG_GPIO_BSRR          ;load BSRR address
+					  LDR        R1,   =DEF_DBG_BSRR_BR_VAL        ;load bit clear val
 					  STR        R1,   [R0]                        ;store val
 $ML.EXIT
 					  MEND                                         ;macro end
